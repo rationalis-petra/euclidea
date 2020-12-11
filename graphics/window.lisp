@@ -5,6 +5,7 @@
 ;;; Window functionality
 (defvar *aspect* nil)
 (defvar *window* nil)
+(defvar *initialized* nil)
 
 (glfw:def-window-size-callback update-viewport (window w h)
   (declare (ignore window))

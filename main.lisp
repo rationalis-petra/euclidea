@@ -4,17 +4,22 @@
 ;; files:
 ;; graphics.lisp
 ;; render-system.lisp
+
+(defclass entity ()())
+
+(defvar *entities* nil)
+(defvar *initialized* nil)
+
 (load "graphics/window.lisp")
 (load "graphics/render-system.lisp")
 
-(defvar *entities* nil)
-(defvar *initialised* nil)
-
-(setf *entities* (list (make-instance 'mesh)))
+(setf *entities* (list (make-instance 'drawable)))
 
 (defun main ()
-  (new-window 1080 720)
-  (render-init)
+  (new-window 1280 720)
+  (unless *initialized*
+    (render-init)
+    (setf *initialized* t))
   (loop until (or (window-should-close-p) (key-is-pressed :escape)) do
     (render-system *entities*))
   (delete-window))
