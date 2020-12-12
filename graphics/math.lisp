@@ -45,10 +45,10 @@
   (make-array '(4 4)))
 
 (defun matrix-identity ()
-  #2A((1 0 0 0)
-      (0 1 0 0)
-      (0 0 1 0)
-      (0 0 0 1)))
+  #2A((1.0 0.0 0.0 0.0)
+      (0.0 1.0 0.0 0.0)
+      (0.0 0.0 1.0 0.0)
+      (0.0 0.0 0.0 1.0)))
 
 (defun matrix-scale (x y z)
   (make-array
@@ -89,8 +89,8 @@
           
 
 (defun matrix-look-at (position target up)
-  ((let* ((camera-direction (vec-normalize (vec- position target)))
-          (camera-right (vec-cross (up camera-direction)))
+  (let* ((camera-direction (vec-normalize (vec- position target)))
+          (camera-right (vec-cross up camera-direction))
           (camera-up (vec-cross camera-direction camera-right)))
      (make-array
       '(4 4)
@@ -114,7 +114,7 @@
              (- (* (elt camera-direction 0) (elt position 0))
                 (* (elt camera-direction 1) (elt position 1))
                 (* (elt camera-direction 2) (elt position 2))))
-       (list 0.0 0.0 0.0 1.0))))))
+       (list 0.0 0.0 0.0 1.0)))))
 
 (defun matrix-perspective (fov aspect near far)
   "Returns a matrix which corresponds to matrix projection"
@@ -158,8 +158,9 @@
   (let ((result (vector 0 0 0 0)))
     (loop for i from 0 to 3 do
       (setf (elt result i)
-            (loop for j from 0 to 3 do
-                  summing (* (aref i j) (elt vector j)) into val
-                  finally (return val))
+            (loop for j from 0 to 3
+                  summing (* (aref matrix i j) (elt vector j)) into val
+                  finally (return val)))
+            finally (return result))))
 
 

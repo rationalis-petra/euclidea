@@ -2,28 +2,57 @@
 
 (defvar +pi+ 3.14159265358979)
 
-(defclass drawable ()
-  ((vao :accessor get-vao
-        :documentation "The gl array"))
+(defclass camera ()
+  ((position
+    :accessor camera-pos
+    :initform (vector 0.0 0.0 2.0)
+    :documentation "The position of the camera")
+   (target
+    :accessor camera-target
+    :initform (vector 0.0 0.0 0.0)
+    :documentation "The position of the point the camera is looking at")
+   (up
+    :accessor camera-up
+    :initform (vector 0.0 1.0 0.0)
+    :documentation "Gives the orientation of the camera"))
+  (:documentation "A class describing a camera, used to generate view matrices"))
+
+(defclass model ()
+  ((vao
+    :accessor get-vao 
+    :documentation "Handle to OpenGL VAO")
+   (size
+    :accessor get-size
+    :documentation "The number of vertices to draw: |indices|")
+   (camera
+    :accessor get-camera
+    :initarg :camera
+    :initform (make-instance 'camera) 
+    :documentation "The Camera from which the scene is rendered")
+   (model-matrix
+    :accessor model-model-matrix
+    :initform (matrix-identity)
+    :documentation "A matrix describing rotation, tranlsation, scale"))
+  
   (:documentation "Wrapper around a gl array"))
+
+    
 
 
 ;;(defun make-vao
 ;; vertices, layout, indices
 ;; drawable: vao
 
-(defun make-vao (m)
+;; a vao: currently just coordiantes & indices
+(defun make-vao (mesh data)
   ;; generate & bind the VBO (data storage)
   (let* ((buffers (gl:gen-buffers 2))
          (vert-buf (elt buffers 0))
          (ind-buf (elt buffers 1)))
 
     ;; populate a c-style array with data
-    (let ((arr (gl:alloc-gl-array :float 12))
-          (verts #(-0.5 -0.5 0.0
-                   -0.5  0.5 0.0
-                    0.5 -0.5 0.0
-                    0.5  0.5 0.0)))
+    (let* ((verts (getf data :vertices))
+           (arr (gl:alloc-gl-array :float (length verts))))
       (dotimes (i (length verts))
         (setf (gl:glaref arr i) (aref verts i)))
 
@@ -37,10 +66,13 @@
       ;; unbind
       (gl:bind-buffer :array-buffer 0))
 
-    (let ((arr (gl:alloc-gl-array :unsigned-short 6))
-          (indexes #(0 2 1 1 2 3)))
-      (dotimes (i (length indexes))
-        (setf (gl:glaref arr i) (aref indexes i)))
+    (let* ((indices (getf data :indices))
+           (arr (gl:alloc-gl-array :unsigned-short (length indices))))
+      ;; unique: set size to length indices
+      (setf (get-size mesh) (length indices))
+      
+      (dotimes (i (length indices))
+        (setf (gl:glaref arr i) (aref indices i)))
 
       ;; bind the index VBO
       (gl:bind-buffer :element-array-buffer ind-buf)
@@ -55,7 +87,6 @@
 
       ;; generate a vao to reference this data
       (let ((vao (gl:gen-vertex-array)))
-        (setf (get-vao m) vao)
         (gl:bind-vertex-array vao)
         (gl:bind-buffer :array-buffer vert-buf)
         ;; how the data is layed out
@@ -68,7 +99,7 @@
         ;; unbind the vao
         (gl:bind-vertex-array 0)
         ;; return
-        (setf (get-vao m) vao))))
+        (setf (get-vao mesh) vao))))
 
 ;; see https://github.com/3b/cl-opengl/blob/master/examples/misc/opengl-array.lisp
 
@@ -79,17 +110,29 @@
 
 
 
-
 (defgeneric draw (entity)
-  (:documentation "for components/entities which are drawable"))
+  (:documentation "a generic draw method"))
 
 (defmethod draw ((m entity)))
 
-(defmethod draw ((m drawable))
-  ;;(gl:enable-client-state :vertices)
+(defmethod draw ((m model))
   (gl:use-program *shader-program*)
+
+  (gl:uniform-matrix-4fv (get-uniform *shader-program* "model") (aops:reshape (model-model-matrix m) 16))
+  (let ((camera (get-camera m)))
+    (gl:uniform-matrix-4fv
+     (get-uniform *shader-program* "view")
+     (aops:reshape (matrix-look-at (camera-pos camera) (camera-target camera) (camera-up camera))
+                   16)))
+
+
+  ;; 1.5707 rads = 90 deg = +pi+/2
+  (gl:uniform-matrix-4fv (get-uniform *shader-program* "projection")
+                         (aops:reshape (matrix-identity) 16))
+                         ;;(aops:reshape (matrix-perspective 1.5707 *aspect* 0.1 100.0) 16))
+
   (gl:bind-vertex-array (get-vao m))
-  (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count 6))
+  (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count (get-size m)))
 
 
 
@@ -107,7 +150,7 @@
 
 (defun render-init ()
   ;; make the shader: location resources/shaders/basic.(vert/frag)
-  (mapcar #'make-vao *entities*)
+  (mapcar #'make-vao *entities* (list (load-obj #p"resources/meshes/cube.obj")))
   (setf *shader-program* (new-shader-program "resources/shaders/basic")))
 
-(defun render-clean ())
+;;(defun render-clean ())

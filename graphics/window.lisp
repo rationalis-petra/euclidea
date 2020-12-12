@@ -1,6 +1,5 @@
 ;;;; Graphics for the ecs - both windowing & rendering
 ;;; includes - these need to be moved elsewhere...
-(ql:quickload '(cl-glfw3 cl-opengl))
 
 ;;; Window functionality
 (defvar *aspect* nil)

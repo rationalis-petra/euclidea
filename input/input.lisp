@@ -1,0 +1,10 @@
+
+(defun input-system (camera) 
+  (when (is-key-pressed :w)
+    (incf (elt (camera-pos camera) 2 1.0)))
+  (when (is-key-pressed :s))
+    (incf (elt (camera-pos camera) 2 1.0))
+  (when (is-key-pressed :a)
+    (incf (elt (camera-pos camera) 2 1.0)))
+  (when (is-key-pressed :d)
+    (incf (elt (camera-pos camera) 2 1.0))))
