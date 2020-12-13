@@ -80,24 +80,27 @@
             0 0 1 z
             0 0 0 1)))
 
-(defun matrix-rotate (x y z)
+(defun matrix-rotate (angles)
   ;; (declare (type float x y z))
-  (vector (* (cos z) (cos y))
-          (* (sin z) (cos y))
-          (- (sin y))
-          0.0
-          (- (* (cos z) (sin y) (sin x)) (* (sin z) (cos x)))
-          (+ (* (sin z) (sin y) (sin x)) (* (cos z) (cos z)))
-          (* (cos y) (sin x))
-          0.0
-          (+ (* (cos z) (sin y) (cos x)) (* (sin z) (sin x)))
-          (- (* (sin z) (sin y) (cos x)) (* (cos z) (sin x)))
-          (* (cos y) (cos x))
-          0.0
-          0.0
-          0.0
-          0.0
-          1.0))
+  (let ((x (elt angles 0))
+        (y (elt angles 1))
+        (z (elt angles 2)))
+    (vector (* (cos z) (cos y))
+            (- (* (cos z) (sin y) (sin x)) (* (sin z) (cos x)))
+            (+ (* (cos z) (sin y) (cos x)) (* (sin z) (sin x)))
+            0.0
+            (* (sin z) (cos y))
+            (+ (* (sin z) (sin y) (sin x)) (* (cos z) (cos z)))
+            (- (* (sin z) (sin y) (cos x)) (* (cos z) (sin x)))
+            0.0
+            (- (sin y))
+            (* (cos y) (sin x))
+            (* (cos y) (cos x))
+            0.0
+            0.0
+            0.0
+            0.0
+            1.0)))
 
 
 (defun matrix-look-at (position target up)
@@ -138,9 +141,9 @@
 
 ;;(declaim (inline mref))
 (defmacro mref (mat i j)
-  "Linear matrix reference: Row i, column j"
+  "Linear matrix reference: Row i, column j (row-major!!)"
   ;; (declare (type integer i j) (type vector mat))
-  `(aref ,mat (+ (* 4 ,j) ,i)))
+  `(aref ,mat (+ (* 4 ,i) ,j)))
 
 (defun matrix* (left right)
   "Performs standard matrix multiplication for 4x4 matrices"

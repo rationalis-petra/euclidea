@@ -1,3 +1,2 @@
 # euclidea
-A program I use to experiment with graphics features/programs, taking advantage of the dynamic nature of cl.
-Feel free to take inspiration from the source/clone & play with it yourself.
+An attempt to use OpenGL to re-create the strange geometries of Antichamber & Manifold Garden

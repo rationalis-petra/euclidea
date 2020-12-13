@@ -1,4 +1,4 @@
-(defclass rigidbody ()
+(defclass rigidbody (entity)
   ((position
     :accessor rb-position
     :initform (vector 0.0 0.0 0.0)

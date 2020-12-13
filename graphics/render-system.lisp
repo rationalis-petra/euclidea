@@ -22,7 +22,7 @@
     :documentation "Gives the orientation of the camera"))
   (:documentation "A class describing a camera, used to generate view matrices"))
 
-(defclass model ()
+(defclass model (entity)
   ((vao
     :accessor model-vao 
     :documentation "Handle to OpenGL VAO")
@@ -36,7 +36,7 @@
     :initform (make-instance 'camera) 
     :documentation "The Camera from which the scene is rendered")
    (model-matrix
-    :accessor model-model-matrix
+    :accessor model-matrix
     :initform (matrix-identity)
     :documentation "A matrix describing rotation, tranlsation, scale"))
   
@@ -94,23 +94,27 @@
 
 
       ;; generate a vao to reference this data
-      (let ((vao (gl:gen-vertex-array)))
-        (gl:bind-vertex-array vao)
-        (gl:bind-buffer :array-buffer vert-buf)
-        ;; how the data is layed out
-        (gl:vertex-attrib-pointer 0 3 :float nil 0 (cffi:null-pointer))
-        (gl:enable-vertex-attrib-array 0)
+    (let ((vao (gl:gen-vertex-array))
+          (stride (* (cffi:foreign-type-size :float) 6)))
+      (gl:bind-vertex-array vao)
+      (gl:bind-buffer :array-buffer vert-buf)
 
-        ;; bind EAO
-        (gl:bind-buffer :element-array-buffer ind-buf)
 
-        ;; unbind the vao
-        (gl:bind-vertex-array 0)
-        ;; return
-        (setf (model-vao mesh) vao))))
+      ;; how the data is layed out
+      (gl:enable-vertex-attrib-array 0)
+      (gl:vertex-attrib-pointer 0 3 :float nil stride (cffi:null-pointer))
+
+      (gl:enable-vertex-attrib-array 1)
+      (gl:vertex-attrib-pointer 1 3 :float nil stride (cffi:null-pointer))
+      ;; bind EAO
+      (gl:bind-buffer :element-array-buffer ind-buf)
+
+      ;; unbind the vao
+      (gl:bind-vertex-array 0)
+      ;; return
+      (setf (model-vao mesh) vao))))
 
 ;; see https://github.com/3b/cl-opengl/blob/master/examples/misc/opengl-array.lisp
-
 
 
 
@@ -126,7 +130,10 @@
 (defmethod draw ((m model))
   (gl:use-program *shader-program*)
 
-  (gl:uniform-matrix-4fv (get-uniform *shader-program* "model") (model-model-matrix m))
+  (gl:uniformfv (get-uniform *shader-program* "light_pos") (vector 0.0 5.0 0.0))
+  (gl:uniformfv (get-uniform *shader-program* "viwe_pos") (camera-pos (model-camera m)))
+
+  (gl:uniform-matrix-4fv (get-uniform *shader-program* "model") (model-matrix m))
   (let* ((camera (model-camera m))
          (theta  (elt (camera-direction camera) 0))
          (phi    (elt (camera-direction camera) 1))
@@ -153,9 +160,8 @@
 
 
 
-(defun render-init (entities)
+(defun render-init ()
   ;; make the shader: location resources/shaders/basic.(vert/frag)
-  (mapcar #'make-vao entities (list (load-obj #p"resources/meshes/tunnel.obj")))
   (setf *shader-program* (new-shader-program "resources/shaders/basic")))
 
 
