@@ -5,12 +5,17 @@
 (defclass camera ()
   ((position
     :accessor camera-pos
-    :initform (vector 0.0 0.0 2.0)
-    :documentation "The position of the camera")
-   (target
-    :accessor camera-target
     :initform (vector 0.0 0.0 0.0)
-    :documentation "The position of the point the camera is looking at")
+    :documentation "The position of the camera")
+   ;; (target
+   ;;  :accessor camera-target
+   ;;  :initform (vector 0.0 0.0 0.0)
+   ;;  :documentation "The position of the point the camera is looking at")
+   (direction
+    :accessor camera-direction
+    ;; default look direction = negative z axis
+    :initform (vector (/ +pi+ 2) 0)
+    :documentation "Alternate to target: a pair of spherical coords denoting the direction the camera is looking")
    (up
     :accessor camera-up
     :initform (vector 0.0 1.0 0.0)
@@ -122,15 +127,24 @@
   (gl:use-program *shader-program*)
 
   (gl:uniform-matrix-4fv (get-uniform *shader-program* "model") (model-model-matrix m))
-  (let ((camera (model-camera m)))
+  (let* ((camera (model-camera m))
+         (theta  (elt (camera-direction camera) 0))
+         (phi    (elt (camera-direction camera) 1))
+         ;;  theta = polar angle (measured down from 0 1 0),
+         ;;  phi   = azimuthal angle (measured from 1 0 0 clockwise)
+         ;;  dir   = this same point, but in cartesian coords
+         (dir (vector (* (sin theta) (cos phi))
+                      (cos theta)
+                      (* (sin theta) (sin phi)))))
+    
     (gl:uniform-matrix-4fv
      (get-uniform *shader-program* "view")
-     (matrix-look-at (camera-pos camera) (camera-target camera) (camera-up camera))))
+     (matrix-look-at (camera-pos camera) (vec+ dir (camera-pos camera)) (camera-up camera))))
 
 
-  ;; 1.5707 rads = 90 deg = +pi+/2
+  ;; args to perspective: fov, aspect ratio near-plane z coord, far-plane z coord
   (gl:uniform-matrix-4fv (get-uniform *shader-program* "projection")
-                         (matrix-perspective 1.5707 *aspect* 0.1 100.0)) 
+                         (matrix-perspective (/ +pi+ 2) *aspect* 0.1 100.0)) 
 
   (gl:bind-vertex-array (model-vao m))
   (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count (model-size m)))
@@ -139,20 +153,16 @@
 
 
 
-
-
-
-
-(defun render-system (entities time)
-  (mapcar (lambda (entity)
-            (draw entity)
-            (display)
-            (poll-events))
-          entities))
-
 (defun render-init (entities)
   ;; make the shader: location resources/shaders/basic.(vert/frag)
   (mapcar #'make-vao entities (list (load-obj #p"resources/meshes/tunnel.obj")))
   (setf *shader-program* (new-shader-program "resources/shaders/basic")))
 
-;;(defun render-clean ())
+
+
+(defun render-system (entities time)
+  (poll-events)
+  (mapcar #'draw entities)
+  (display))
+
+

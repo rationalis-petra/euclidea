@@ -1,0 +1,62 @@
+
+;; (defun input-system (camera) 
+;;   (when (key-is-pressed :w)
+;;     (incf (aref (camera-pos camera) 2) 1.0))
+;;   (when (key-is-pressed :s)
+;;     (incf (aref (camera-pos camera) 2) 1.0))
+;;   (when (key-is-pressed :a)
+;;     (incf (aref (camera-pos camera) 0) 1.0))
+;;   (when (key-is-pressed :d)
+;;     (incf (aref (camera-pos camera) 0) 1.0)))
+
+(defvar *key-sensitivity* 5.0)
+(defvar *mouse-sensitivity* 0.1)
+
+(defun input-system (entities state)
+  (let ((entity (car entities))
+        (time (world-delta-time state)))
+    (let* ((theta (elt (camera-direction (model-camera entity)) 0))
+           (phi   (elt (camera-direction (model-camera entity)) 1))
+           ;; calculate a 'forward' and 'right' vectors based on the camera's direction
+           (forward (vector (* (sin theta) (cos phi))
+                            (cos theta)
+                            (* (sin theta) (sin phi))))
+           (right (vec-cross forward (camera-up (model-camera entity))))
+           (up (camera-up (model-camera entity))))
+
+      ;; forward/backward 
+      (when (key-is-pressed-p :w)
+        (setf (camera-pos (model-camera entity))
+              (vec+ (camera-pos (model-camera entity))
+                    (vec-scale (* time *key-sensitivity*) forward))))
+      (when (key-is-pressed-p :s)
+        (setf (camera-pos (model-camera entity))
+              (vec+ (camera-pos (model-camera entity))
+                    (vec-scale (* -1.0 time *key-sensitivity*) forward))))
+
+      ;; left/right (x-coord)
+      (when (key-is-pressed-p :a)
+        (setf (camera-pos (model-camera entity))
+              (vec+ (camera-pos (model-camera entity))
+                    (vec-scale (* -1.0 time *key-sensitivity*) right))))
+      (when (key-is-pressed-p :d)
+        (setf (camera-pos (model-camera entity))
+              (vec+ (camera-pos (model-camera entity))
+                    (vec-scale (* time *key-sensitivity*) right))))
+
+      ;; up/down (y-coord)
+      (when (key-is-pressed-p :space)
+        (setf (camera-pos (model-camera entity))
+              (vec+ (camera-pos (model-camera entity))
+                    (vec-scale (* time *key-sensitivity*) up))))
+      (when (key-is-pressed-p :left-shift)
+        (setf (camera-pos (model-camera entity))
+              (vec+ (camera-pos (model-camera entity))
+                    (vec-scale (* -1.0 time *key-sensitivity*) up)))))
+
+    (let ((direction (camera-direction (model-camera entity)))
+          (delta-pos (world-cursor-delta-pos state)))
+      ;; index 0 = x, affects phi = index 1
+      (incf (elt direction 0) (* (elt delta-pos 1) time *mouse-sensitivity*))
+      ;; index 1 = y, affects theta = index 0
+      (incf (elt direction 1) (* (elt delta-pos 0) time *mouse-sensitivity*)))))

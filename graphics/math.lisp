@@ -136,11 +136,6 @@
             0.0 0.0 (/ (- (+ far near)) (- far near)) (/ (* -2 far near) (- far near))
             0.0 0.0 -1.0 0.0)))
 
-     ti 0.0 0.0 0.0
-            0.0 ri 0.0 0.0
-            0.0 0.0 (/ (- (+ far near)) (- far near)) -1.0
-            0.0 0.0 (/ (* -2 far near) (- far near)) 0.0)))
-
 ;;(declaim (inline mref))
 (defmacro mref (mat i j)
   "Linear matrix reference: Row i, column j"

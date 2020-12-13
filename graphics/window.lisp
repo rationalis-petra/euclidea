@@ -16,6 +16,8 @@
   (setf *aspect* (/ width height))
   (glfw:create-window :width width :height height :title "Euclidia")
   (setf *window* (glfw:get-current-context))
+  (glfw:set-input-mode :cursor :disabled)
+
   (gl:viewport 0 0 width height)
   (gl:clear-color 0.2 0.3 0.3 1.0)
   (gl:enable :depth-test))
@@ -31,7 +33,7 @@
 
 
 ;;; can we re-export symbols? - relevant to this entire section!
-(defun key-is-pressed (key)
+(defun key-is-pressed-p (key)
   (eq (glfw:get-key key *window*) :press))
 
 (defun window-should-close-p ()
@@ -39,6 +41,9 @@
 
 (defun poll-events ()
   (glfw:poll-events))
+
+(defun get-cursor-pos ()
+  (glfw:get-cursor-position *window*))
 
 
 ;;; Shader functionality
