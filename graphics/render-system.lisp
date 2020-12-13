@@ -19,14 +19,15 @@
 
 (defclass model ()
   ((vao
-    :accessor get-vao 
+    :accessor model-vao 
     :documentation "Handle to OpenGL VAO")
    (size
-    :accessor get-size
+    :accessor model-size
     :documentation "The number of vertices to draw: |indices|")
    (camera
-    :accessor get-camera
+    :accessor model-camera
     :initarg :camera
+    :allocation :class
     :initform (make-instance 'camera) 
     :documentation "The Camera from which the scene is rendered")
    (model-matrix
@@ -35,6 +36,8 @@
     :documentation "A matrix describing rotation, tranlsation, scale"))
   
   (:documentation "Wrapper around a gl array"))
+
+    
 
     
 
@@ -69,7 +72,7 @@
     (let* ((indices (getf data :indices))
            (arr (gl:alloc-gl-array :unsigned-short (length indices))))
       ;; unique: set size to length indices
-      (setf (get-size mesh) (length indices))
+      (setf (model-size mesh) (length indices))
       
       (dotimes (i (length indices))
         (setf (gl:glaref arr i) (aref indices i)))
@@ -99,7 +102,7 @@
         ;; unbind the vao
         (gl:bind-vertex-array 0)
         ;; return
-        (setf (get-vao mesh) vao))))
+        (setf (model-vao mesh) vao))))
 
 ;; see https://github.com/3b/cl-opengl/blob/master/examples/misc/opengl-array.lisp
 
@@ -118,22 +121,19 @@
 (defmethod draw ((m model))
   (gl:use-program *shader-program*)
 
-  (gl:uniform-matrix-4fv (get-uniform *shader-program* "model") (aops:reshape (model-model-matrix m) 16))
-  (let ((camera (get-camera m)))
+  (gl:uniform-matrix-4fv (get-uniform *shader-program* "model") (model-model-matrix m))
+  (let ((camera (model-camera m)))
     (gl:uniform-matrix-4fv
      (get-uniform *shader-program* "view")
-     (aops:reshape (matrix-look-at (camera-pos camera) (camera-target camera) (camera-up camera))
-                   16)))
+     (matrix-look-at (camera-pos camera) (camera-target camera) (camera-up camera))))
 
 
   ;; 1.5707 rads = 90 deg = +pi+/2
   (gl:uniform-matrix-4fv (get-uniform *shader-program* "projection")
-                         (aops:reshape (matrix-identity) 16))
-                         ;;(aops:reshape (matrix-perspective 1.5707 *aspect* 0.1 100.0) 16))
+                         (matrix-perspective 1.5707 *aspect* 0.1 100.0)) 
 
-  (gl:bind-vertex-array (get-vao m))
-  (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count (get-size m)))
-
+  (gl:bind-vertex-array (model-vao m))
+  (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count (model-size m)))
 
 
 
@@ -142,15 +142,17 @@
 
 
 
-(defun render-system (entities)
-  (loop for entity in entities do
-    (draw entity)
-    (display)
-    (poll-events)))
 
-(defun render-init ()
+(defun render-system (entities time)
+  (mapcar (lambda (entity)
+            (draw entity)
+            (display)
+            (poll-events))
+          entities))
+
+(defun render-init (entities)
   ;; make the shader: location resources/shaders/basic.(vert/frag)
-  (mapcar #'make-vao *entities* (list (load-obj #p"resources/meshes/cube.obj")))
+  (mapcar #'make-vao entities (list (load-obj #p"resources/meshes/tunnel.obj")))
   (setf *shader-program* (new-shader-program "resources/shaders/basic")))
 
 ;;(defun render-clean ())

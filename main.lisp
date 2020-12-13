@@ -15,19 +15,32 @@
 (load "graphics/window.lisp")
 (load "graphics/mesh-loader.lisp")
 (load "graphics/render-system.lisp")
+(load "input/input.lisp")
+
+
+(defclass cube (model rigidbody) ())
 
 (defun main ()
   (unwind-protect
        (progn
-         (let* ((camera (make-instance 'camera))
-                (entities (list make-instance 'model :camera camera)))
+         (let* ((entities (list (make-instance 'cube)))
+                (time-1 (get-internal-real-time))
+                (time-2 0))
 
            (new-window 1280 720)
-           (render-init)
+           (render-init entities)
            (setf *initialized* t)
 
+           (setf time-2 (get-internal-real-time))
            (loop until (or (window-should-close-p) (key-is-pressed :escape)) do
-             (render-system entities))))
+             (let ((delta-time (/ (- time-2 time-1) internal-time-units-per-second)))
+               (setf time-1 time-2)
+
+               (input-system entities delta-time)
+               (physics-system entities delta-time)
+               (render-system entities delta-time)
+
+               (setf time-2 (get-internal-real-time))))))
          (delete-window)))
 
 (defun make-executable ()

@@ -19,7 +19,8 @@
      ((string= (car ,data) "f")
       (dolist (index (to-triples (cdr ,data)))
         (vector-push-extend
-         (read-from-string (car (split-sequence:split-sequence #\/ index)))
+         ;; subtract 1 because vertex references start at 1
+         (- (read-from-string (car (split-sequence:split-sequence #\/ index))) 1)
          (getf ,mesh :indices) 1)))))
 
 (defun load-obj (filename)
