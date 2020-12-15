@@ -12,17 +12,15 @@
     :documentation "The current rotation of the cube")
    (position
     :accessor cube-position
-    :initform (vector 0.0 0.0 0.0)
+    :initform (vector 0.6 0.0 0.0)
     :initarg :position
     :documentation "The position of the cube"))
   (:documentation "A cube which rotates over time"))
   
 
-
-(defun make-rotating-cube (position)
-  (let ((cube (make-instance 'rotating-cube :position position)))
-    (make-vao cube (load-obj #p"resources/meshes/cube.obj" :normal-p t))
-    cube))
+(defmethod initialize-instance ((cube rotating-cube) &key)
+  (make-vao cube (load-obj #p"resources/meshes/cube.obj" :normal-p t))
+  (call-next-method))
 
 (defmethod update ((cube rotating-cube) state)
   (incf (elt (cube-rotation cube) 1) (* (world-delta-time state) 1.1))
@@ -54,13 +52,26 @@
    (lambda ()
      (setf (world-entities *engine*)
            (list
-            (make-rotating-cube (vector -10.0 0.0 0.0))
-            (make-rotating-cube (vector -14.0 0.0 0.0))
-            (make-rotating-cube (vector -18.0 0.0 0.0))
-            (make-rotating-cube (vector -18.0 0.0 4.0))
+            (make-instance 'rotating-cube :position #(-100.0 0.0 0.0) :color #(0.8 0.0 0.0))
+            (make-instance 'rotating-cube :position #(100.0 0.0 0.0) :color #(0.0 0.8 0.0))
+            (make-instance 'rotating-cube :position #(0.0 0.0 100.0) :color #(0.0 0.0 0.8))
+            (make-instance 'rotating-cube :position #(0.0 0.0 -100.0) :color #(0.8 0.0 0.8))
+
             (make-tunnel (vector 10 0 0))
             (make-hollow-cube (vector 0.0 0.0 0.0))
-            (make-instance 'portal-plane)))))
+
+            (make-instance 'portal-plane
+                           :out-position #(-96.0 0.0 0.0)
+                           :rotation (vector 0.0 0.0 0.0))
+            (make-instance 'portal-plane
+                           :out-position #(0.0 0.0 96.0)
+                           :rotation (vector 0.0 (/ pi 2) 0.0))
+            (make-instance 'portal-plane
+                           :out-position #(96.0 0.0 0.0)
+                           :rotation (vector 0.0 pi 0.0))
+            (make-instance 'portal-plane
+                           :out-position #(0.0 0.0 -96.0)
+                           :rotation (vector 0.0 (/ pi 2/3) 0.0))))))
   (run *engine*))
 
 

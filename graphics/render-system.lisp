@@ -1,24 +1,5 @@
-(defvar *shader-program*)
 
-(defclass camera ()
-  ((position
-    :accessor camera-pos
-    :initform (vector 0.0 0.0 0.0)
-    :documentation "The position of the camera")
-   ;; (target
-   ;;  :accessor camera-target
-   ;;  :initform (vector 0.0 0.0 0.0)
-   ;;  :documentation "The position of the point the camera is looking at")
-   (direction
-    :accessor camera-direction
-    ;; default look direction = negative z axis
-    :initform (vector (/ pi -2) 0)
-    :documentation "Alternate to target: a pair of spherical coords denoting the direction the camera is looking")
-   (up
-    :accessor camera-up
-    :initform (vector 0.0 1.0 0.0)
-    :documentation "Gives the orientation of the camera"))
-  (:documentation "A class describing a camera, used to generate view matrices"))
+(defvar *shader-program*)
 
 (defclass model (entity)
   ((vao
@@ -34,12 +15,11 @@
     :accessor model-shader
     :initform *shader-program*
     :documentation "A Handle to the shader of the entity")
-   (camera
-    :accessor model-camera
-    :initarg :camera
-    :allocation :class
-    :initform (make-instance 'camera) 
-    :documentation "The Camera from which the scene is rendered")
+   (color
+    :accessor model-color
+    :initarg :color
+    :initform (vector 1.0 1.0 1.0)
+    :documentation "An rgb vector denoting the color of the model")
    (model-matrix
     :accessor model-matrix
     :initform (matrix-identity)
@@ -141,29 +121,18 @@
 (defmethod draw ((m entity) state))
 
 (defmethod draw ((m model) state)
-  (with-slots (shader texture camera) m
+  (with-slots (shader texture color) m
     (gl:use-program shader)
 
     (gl:uniformfv (get-uniform shader "light_pos") (vector 0.0 5.0 0.0))
+    (gl:uniformfv (get-uniform shader "object_color") color)
     ;;(gl:uniformfv (get-uniform shader "view_pos") (camera-pos (model-camera m)))
 
     ;; model matrix
     (gl:uniform-matrix-4fv (get-uniform shader "model") (model-matrix m))
 
     ;; view matrix
-    (let* ((theta  (elt (camera-direction camera) 0))
-           (phi    (elt (camera-direction camera) 1))
-           ;;  theta = polar angle (measured down from 0 1 0),
-           ;;  phi   = azimuthal angle (measured from 1 0 0 clockwise)
-           ;;  dir   = this same point, but in cartesian coords
-           (dir (vector (* (sin theta) (cos phi))
-                        (cos theta)
-                        (* (sin theta) (sin phi)))))
-      
-      (gl:uniform-matrix-4fv
-       (get-uniform shader "view")
-       (matrix-look-at (camera-pos camera) (vec+ dir (camera-pos camera)) (camera-up camera))))
-
+    (gl:uniform-matrix-4fv (get-uniform shader "view") (gen-view-matrix (world-camera state)))
 
     ;; perspective matrix
     ;; args to perspective: fov, aspect ratio near-plane z coord, far-plane z coord

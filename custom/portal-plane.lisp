@@ -13,23 +13,31 @@
     :documentation "A renderbuffer object to store dept data")
    (shader
     :initform *portal-shader*)
-   (portal-camera))
+   (position
+    :initarg :position
+    :initform #(0.0 0.0 0.0)
+    :documentation "The position of the portal plane")
+   (portal-out
+    :initform #(0.0 0.0 0.0)
+    :initarg :out-position
+    :documentation "The location at which the portal plane emerges"))
   (:documentation "A plane which displays the scene as rendered from a different location"))
 
-(defmethod initialize-instance ((portal portal-plane) &key)
+(defmethod initialize-instance ((portal portal-plane) &key rotation)
   (make-vao portal (load-obj #p"resources/meshes/portal-plane.obj" :texture-p t))
 
   (with-slots (portal-camera model-matrix shader fbo rbo texture) portal
     (setf model-matrix (matrix*
                         (matrix-identity)
                         ;;(matrix-translate position)
+                        (matrix-rotate rotation)
                         (matrix-scale (vector 2.0 2.0 2.0))))
 
     ;; generate fbo, rbo, texture
     (setf fbo (gl:gen-framebuffer))
     (setf rbo (gl:gen-renderbuffer))
     (setf texture (gl:gen-texture))
-           
+
 
     ;; texture data/settings
     (gl:bind-texture :texture-2d texture)
@@ -62,15 +70,20 @@
   (call-next-method))
 
 (defmethod draw ((portal portal-plane) (world engine))
-  (with-slots (fbo texture shader portal-camera) portal
+  (with-slots (fbo texture shader position portal-out) portal
     ;; generate the texture to load
     (gl:bind-framebuffer :framebuffer fbo)
     (gl:clear :color-buffer :depth-buffer)
     (gl:viewport 0 0 512 512)
     (setf *aspect* 1)
-
-    (mapcar (lambda (e) (unless (typep e 'portal-plane) (draw e world)))
-            (world-entities world))
+    (let ((camera (world-camera world)))
+      (setf (world-camera world) (make-instance 'rectangular-camera
+                                         :position portal-out
+                                         :direction (vec-normalize (vec- (camera-pos camera) position))
+                                         :up (camera-up camera)))
+      (mapcar (lambda (e) (unless (typep e 'portal-plane) (draw e world)))
+              (world-entities world))
+      (setf (world-camera world) camera))
 
     (gl:bind-framebuffer :framebuffer 0)
     (gl:viewport 0 0 1280 720)

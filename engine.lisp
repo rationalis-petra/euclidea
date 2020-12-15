@@ -21,6 +21,7 @@ which do not justify building an entirely new system"))
 
 (load "graphics/math.lisp")
 (load "graphics/window.lisp")
+(load "graphics/camera.lisp")
 (load "graphics/mesh-loader.lisp")
 (load "graphics/render-system.lisp")
 (load "physics/physics-system.lisp")
@@ -41,11 +42,17 @@ which do not justify building an entirely new system"))
     :initform (list (lambda () (delete-window)))
     :documentation "Methods which cleanup resources, etc. Guaranteed to be called via unwind-protect")
 
-   ;; state variables
+   ;; Variables relating to 
    (entities
     :accessor world-entities
     :initform nil
     :documentation "The objectes which the simulation engine will operate on")
+   (camera
+    :accessor world-camera
+    :initform (make-instance 'polar-camera :position #(0.0 0.0 1.0))
+    :documentation "The default camera. It is from this perspective that a model will be rendered")
+
+   ;; variables relating to input/output (incl. time)
    (delta-time
     :accessor world-delta-time
     :initform 0.0

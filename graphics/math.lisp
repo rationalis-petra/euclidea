@@ -102,9 +102,9 @@
             1.0)))
 
 
-(defun matrix-look-at (position target up)
+(defun matrix-look-at (position direction up)
   ;; (declare (type vector position target up))
-  (let* ((camera-direction (vec-normalize (vec- position target)))
+  (let* ((camera-direction direction)
           (camera-right (vec-normalize (vec-cross up camera-direction)))
           (camera-up (vec-cross camera-direction camera-right)))
     (vector (elt camera-right 0)
@@ -144,17 +144,19 @@
   ;; (declare (type integer i j) (type vector mat))
   `(aref ,mat (+ (* 4 ,i) ,j)))
 
-(defun matrix* (left right)
+(defun matrix* (&rest args)
   "Performs standard matrix multiplication for 4x4 matrices"
-  (let ((out (make-array 16)))
-    (loop for i from 0 to 3 do
-      (loop for j from 0 to 3 do
-        (loop for k from 0 to 3 do
-          (incf (mref out i j)
-                (*
-                 (mref left i k)
-                 (mref right k j))))))
-    out))
+  (flet ((two-times (left right)
+           (let ((out (make-array 16)))
+             (loop for i from 0 to 3 do
+               (loop for j from 0 to 3 do
+                 (loop for k from 0 to 3 do
+                   (incf (mref out i j)
+                         (*
+                          (mref left i k)
+                          (mref right k j))))))
+             out)))
+    (reduce #'two-times args)))
 
 
 (defun matrix+ (left right)
