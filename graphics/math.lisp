@@ -63,18 +63,17 @@
           0.0 0.0 1.0 0.0
           0.0 0.0 0.0 1.0))
 
-(defun matrix-scale (x y z)
+(defun matrix-scale (scale)
+  (let ((x (elt scale 0)) (y (elt scale 1)) (z (elt scale 2)))
   ;; (declare (type float x y z))
-  (vector x 0.0 0.0 0.0
-          0.0 y 0.0 0.0
-          0.0 0.0 z 0.0
-          0.0 0.0 0.0 1))
+    (vector x 0.0 0.0 0.0
+            0.0 y 0.0 0.0
+            0.0 0.0 z 0.0
+            0.0 0.0 0.0 1)))
 
 (defun matrix-translate (pos)
   ;; (declare (type float x y z))
-  (let ((x (elt pos 0))
-        (y (elt pos 1))
-        (z (elt pos 2)))
+  (let ((x (elt pos 0)) (y (elt pos 1)) (z (elt pos 2)))
     (vector 1 0 0 x
             0 1 0 y
             0 0 1 z

@@ -18,7 +18,9 @@
 
   (:documentation "Components of a point particle"))
 
-(defgeneric physics-update (entity))
+(defgeneric physics-update (entity)
+  (:documentation "A function which will get called on an entity every frame.
+Determines the behaviour of the physics system"))
 
 (defun physics-system (entities time)
   (mapcar #'physics-update entities))
@@ -28,10 +30,7 @@
 
 (defmethod physics-update ((e rigidbody))
   "Updates position, velocity, acceleration based on rules"
-  (let ((position (rb-position e))
-        (velocity (rb-velocity e))
-        (acceleration (rb-acceleration e)))
-
+  (with-slots (position) e
     ;; when e is a model, update the model matrix
     (when (typep e 'model)
-      (setf (model-model-matrix e) (matrix-translate position)))))
+      (setf (model-matrix e) (matrix-translate position)))))

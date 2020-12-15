@@ -11,17 +11,31 @@
             (elt data 3)
             (elt data 0))))
 
-(defun load-obj (filename)
+(defun gen-key-list (predicates indices)
+  (when predicates
+    (if (car predicates)
+        (cons (car indices) (gen-key-list (cdr predicates) (cdr indices)))
+        (gen-key-list (cdr predicates) (cdr indices)))))
+  
+
+(defun load-obj (filename &key (texture-p nil) (normal-p nil))
   "Function for loading in Waveform (.obj) 3D meshes"
 
-  (let ((mesh (list
-               :vertices (make-array 1 :fill-pointer 0)
-               :normals (make-array 1 :fill-pointer 0)
-               :indices (make-array 1 :fill-pointer 0)
-               :normal-indices (make-array 1 :fill-pointer 0)))
+  (let (;; Vertex data: one vector per datatype
+        (vertices   (make-array 1 :fill-pointer 0))
+        (tex-coords (make-array 1 :fill-pointer 0))
+        (normals    (make-array 1 :fill-pointer 0))
+
+        ;; index data: indices into the different vertex types
+        (indices        (make-array 1 :fill-pointer 0))
+        (tex-indices    (make-array 1 :fill-pointer 0))
+        (normal-indices (make-array 1 :fill-pointer 0))
+
         (return-mesh (list
                       :vertices (make-array 1 :fill-pointer 0)
-                      :indices (make-array 1 :fill-pointer 0))))
+                      :indices (make-array 1 :fill-pointer 0)
+                      :texture-p texture-p
+                      :normal-p normal-p)))
 
     (with-open-file (obj-file filename
                               :direction :input)
@@ -31,43 +45,63 @@
                 (cond
                   ((string= (car data) "v")
                    (dolist (vertex (cdr data))
-                     (vector-push-extend (read-from-string vertex) (getf mesh :vertices) 1)))
+                     (vector-push-extend (read-from-string vertex) vertices 1)))
                   ((string= (car data) "vn")
                    (dolist (normal (cdr data))
-                     (vector-push-extend (read-from-string normal) (getf mesh :normals) 1)))
+                     (vector-push-extend (read-from-string normal) normals 1)))
+                  ((string= (car data) "vt")
+                   (dolist (normal (cdr data))
+                     (vector-push-extend (read-from-string normal) tex-coords 1)))
                   ((string= (car data) "f")
                    (dolist (index (to-triples (cdr data)))
                      (let ((indexes (split-sequence:split-sequence #\/ index)))
                        (vector-push-extend
                         ;; subtract 1 because vertex references start at 1
                         (- (read-from-string (car indexes)) 1)
-                        (getf mesh :indices) 1)
+                        indices 1)
+
+                       (vector-push-extend
+                        (- (read-from-string (cadr indexes)) 1)
+                        tex-indices 1)
+
                        (vector-push-extend
                         (- (read-from-string (caddr indexes)) 1)
-                        (getf mesh :normal-indices) 1))))))))
+                        normal-indices 1))))))))
 
 
-      ;; for each combination of position/normal indices, we create a /new/ index, and a new vertex
-      ;; if that position/normal combination is already in the vertex list, then use it's index
-    (loop for vindex across (getf mesh :indices)
-          for nindex across (getf mesh :normal-indices)
+    ;; for each combination of indices, we create a /new/ index, and a new vertex
+    ;; if that  combination is already in the vertex list, then use it's index
+    ;; we only consider normals/texture indices if the corresponding key is not nil
+    (loop for vindex across indices
+          for tindex across tex-indices
+          for nindex across normal-indices
+          for key = (cons vindex (gen-key-list (list texture-p normal-p) (list tindex nindex)))
+
           with next-index = 0
           with map = (make-hash-table :test #'equal) do
-            (if (gethash (cons vindex nindex) map)
+            (if (gethash key map)
                 ;; if the index is already in the hash-table, add to indices & continue
-                (vector-push-extend (gethash (cons vindex nindex) map) (getf return-mesh :indices) 1)
+                (vector-push-extend (gethash key map) (getf return-mesh :indices) 1)
 
-                ;; otherwise, make a new index, and a new vertex which concatenates (vertex, normal) 
+                ;; otherwise, make a new index, and a new vertex which concatenates (vertex, texture, normal) 
+                ;; which ones we make will 
                 (progn
                   (vector-push-extend next-index (getf return-mesh :indices) 1)
+                  (setf (gethash key map) next-index)
                   (incf next-index)
                   (loop for i from 0 to 2 do (vector-push-extend
-                                              (aref (getf mesh :vertices) (+ (* vindex 3) i))
+                                              (aref vertices (+ (* vindex 3) i))
                                               (getf return-mesh :vertices)
                                               1))
-                  (loop for i from 0 to 2 do (vector-push-extend
-                                              (aref (getf mesh :normals) (+ (* nindex 3) i))
-                                              (getf return-mesh :vertices)
-                                              1)))))
+                  (when normal-p
+                    (loop for i from 0 to 2 do (vector-push-extend
+                                                (aref normals (+ (* nindex 3) i))
+                                                (getf return-mesh :vertices)
+                                                1)))
+                  (when texture-p
+                    (loop for i from 0 to 1 do (vector-push-extend
+                                                (aref tex-coords (+ (* tindex 2) i))
+                                                (getf return-mesh :vertices)
+                                                1))))))
     return-mesh))
 

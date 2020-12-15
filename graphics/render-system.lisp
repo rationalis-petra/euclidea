@@ -1,7 +1,5 @@
 (defvar *shader-program*)
 
-(defvar +pi+ 3.14159265358979)
-
 (defclass camera ()
   ((position
     :accessor camera-pos
@@ -14,7 +12,7 @@
    (direction
     :accessor camera-direction
     ;; default look direction = negative z axis
-    :initform (vector (/ +pi+ 2) 0)
+    :initform (vector (/ pi -2) 0)
     :documentation "Alternate to target: a pair of spherical coords denoting the direction the camera is looking")
    (up
     :accessor camera-up
@@ -29,6 +27,13 @@
    (size
     :accessor model-size
     :documentation "The number of vertices to draw: |indices|")
+   (texture
+    :initform nil
+    :documentation "A handle to the texture that the framebuffer will render to")
+   (shader
+    :accessor model-shader
+    :initform *shader-program*
+    :documentation "A Handle to the shader of the entity")
    (camera
     :accessor model-camera
     :initarg :camera
@@ -40,7 +45,7 @@
     :initform (matrix-identity)
     :documentation "A matrix describing rotation, tranlsation, scale"))
   
-  (:documentation "Wrapper around a gl array"))
+  (:documentation "Contains information needed by OpenGL to render an Object"))
 
     
 
@@ -95,17 +100,25 @@
 
       ;; generate a vao to reference this data
     (let ((vao (gl:gen-vertex-array))
-          (stride (* (cffi:foreign-type-size :float) 6)))
+          (stride (* (cffi:foreign-type-size :float)
+                     (+ 3
+                        (if (getf data :texture-p) 2 0)
+                        (if (getf data :normal-p) 3 0)))))
       (gl:bind-vertex-array vao)
       (gl:bind-buffer :array-buffer vert-buf)
 
-
       ;; how the data is layed out
       (gl:enable-vertex-attrib-array 0)
-      (gl:vertex-attrib-pointer 0 3 :float nil stride (cffi:null-pointer))
+      (gl:vertex-attrib-pointer 0 3 :float nil stride 0)
 
-      (gl:enable-vertex-attrib-array 1)
-      (gl:vertex-attrib-pointer 1 3 :float nil stride (cffi:null-pointer))
+      (when (getf data :texture-p)
+        (gl:enable-vertex-attrib-array 1)
+        (gl:vertex-attrib-pointer 1 2 :float nil stride (* 3 (cffi:foreign-type-size :float))))
+
+      (when (getf data :normal-p)
+        (gl:enable-vertex-attrib-array 1)
+        (gl:vertex-attrib-pointer 1 3 :float nil stride (* 3 (cffi:foreign-type-size :float))))
+
       ;; bind EAO
       (gl:bind-buffer :element-array-buffer ind-buf)
 
@@ -122,41 +135,45 @@
 
 
 
-(defgeneric draw (entity)
+(defgeneric draw (entity state)
   (:documentation "a generic draw method"))
 
-(defmethod draw ((m entity)))
+(defmethod draw ((m entity) state))
 
-(defmethod draw ((m model))
-  (gl:use-program *shader-program*)
+(defmethod draw ((m model) state)
+  (with-slots (shader texture camera) m
+    (gl:use-program shader)
 
-  (gl:uniformfv (get-uniform *shader-program* "light_pos") (vector 0.0 5.0 0.0))
-  (gl:uniformfv (get-uniform *shader-program* "viwe_pos") (camera-pos (model-camera m)))
+    (gl:uniformfv (get-uniform shader "light_pos") (vector 0.0 5.0 0.0))
+    ;;(gl:uniformfv (get-uniform shader "view_pos") (camera-pos (model-camera m)))
 
-  (gl:uniform-matrix-4fv (get-uniform *shader-program* "model") (model-matrix m))
-  (let* ((camera (model-camera m))
-         (theta  (elt (camera-direction camera) 0))
-         (phi    (elt (camera-direction camera) 1))
-         ;;  theta = polar angle (measured down from 0 1 0),
-         ;;  phi   = azimuthal angle (measured from 1 0 0 clockwise)
-         ;;  dir   = this same point, but in cartesian coords
-         (dir (vector (* (sin theta) (cos phi))
-                      (cos theta)
-                      (* (sin theta) (sin phi)))))
-    
-    (gl:uniform-matrix-4fv
-     (get-uniform *shader-program* "view")
-     (matrix-look-at (camera-pos camera) (vec+ dir (camera-pos camera)) (camera-up camera))))
+    ;; model matrix
+    (gl:uniform-matrix-4fv (get-uniform shader "model") (model-matrix m))
 
-
-  ;; args to perspective: fov, aspect ratio near-plane z coord, far-plane z coord
-  (gl:uniform-matrix-4fv (get-uniform *shader-program* "projection")
-                         (matrix-perspective (/ +pi+ 2) *aspect* 0.1 100.0)) 
-
-  (gl:bind-vertex-array (model-vao m))
-  (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count (model-size m)))
+    ;; view matrix
+    (let* ((theta  (elt (camera-direction camera) 0))
+           (phi    (elt (camera-direction camera) 1))
+           ;;  theta = polar angle (measured down from 0 1 0),
+           ;;  phi   = azimuthal angle (measured from 1 0 0 clockwise)
+           ;;  dir   = this same point, but in cartesian coords
+           (dir (vector (* (sin theta) (cos phi))
+                        (cos theta)
+                        (* (sin theta) (sin phi)))))
+      
+      (gl:uniform-matrix-4fv
+       (get-uniform shader "view")
+       (matrix-look-at (camera-pos camera) (vec+ dir (camera-pos camera)) (camera-up camera))))
 
 
+    ;; perspective matrix
+    ;; args to perspective: fov, aspect ratio near-plane z coord, far-plane z coord
+    (gl:uniform-matrix-4fv (get-uniform shader "projection")
+                           (matrix-perspective (/ pi 2) *aspect* 0.1 100.0)) 
+
+    ;; now actually draw the shape
+    (when texture (gl:bind-texture :texture-2d texture))
+    (gl:bind-vertex-array (model-vao m))
+    (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count (model-size m))))
 
 
 
@@ -166,9 +183,9 @@
 
 
 
-(defun render-system (entities time)
+(defun render-system (entities state)
   (poll-events)
-  (mapcar #'draw entities)
+  (mapcar (lambda (x) (draw x state)) entities)
   (display))
 
 

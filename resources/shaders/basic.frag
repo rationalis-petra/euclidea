@@ -22,11 +22,6 @@ void main()
     float diff = max(dot(norm, light_dir), 0.0);
     vec3 diffuse = diff * light_colour;
 
-     // vec3 view_dir = normalize(view_pos - frag_pos);
-     // vec3 reflect_dir = reflect(-light_dir, norm);
-     // float spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32);
-     // vec3 specular = specular_strength * spec * light_colour;
-
     vec3 result;
     result = (diffuse + ambient) * obj_colour;
 
