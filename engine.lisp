@@ -9,21 +9,28 @@
 (defclass entity () ()
   (:documentation "Root of Object hierarchy for systems"))
 
-
-(defmethod :before initialize-instance ((entity entity) &key)
-  (push entity (all-entities entity)))
-
 (defgeneric update (entity state)
   (:documentation "A function that a user of the engine can choose to implement to define custom behaviours, but
 which do not justify building an entirely new system"))
 
+(defgeneric attach-window (engine window)
+  (:documentation "An engine will render to an attached window: can only have one attached window at a time"))
+
+
+
+
+
 (defmethod update ((entity entity) state) nil)
 
-(load "graphics/math.lisp")
+(load "math/vector.lisp")
+(load "math/matrix.lisp")
+(load "math/transform.lisp")
+
 (load "graphics/window.lisp")
 (load "graphics/camera.lisp")
 (load "graphics/mesh-loader.lisp")
 (load "graphics/render-system.lisp")
+
 (load "physics/physics-system.lisp")
 (load "input/input-system.lisp")
 
@@ -31,7 +38,7 @@ which do not justify building an entirely new system"))
 (defclass engine ()
   ((init-functions
     :accessor engine-init-funcs
-    :initform (list (lambda () (new-window 1280 720)) #'render-init)
+    :initform (list (lambda () (attach-window *engine* (new-window 1280 720))) #'render-init)
     :documentation "Methods which initialize resources etc. Take 0 arguments")
    (system-functions
     :accessor engine-system-funcs
@@ -49,7 +56,11 @@ which do not justify building an entirely new system"))
     :documentation "The objectes which the simulation engine will operate on")
    (camera
     :accessor world-camera
-    :initform (make-instance 'polar-camera :position #(0.0 0.0 1.0))
+    :initform (make-instance 'polar-camera)
+    :documentation "The default camera. It is from this perspective that a model will be rendered")
+   (view
+    :accessor world-view
+    :initform (matrix:identity 4)
     :documentation "The default camera. It is from this perspective that a model will be rendered")
 
    ;; variables relating to input/output (incl. time)
@@ -67,6 +78,20 @@ which do not justify building an entirely new system"))
     :documentation "The change in location of the cursor since last main-loop iteration"))
    (:documentation "Encapsulates the necessary state & methods to run a simulation"))
 
+
+(defmethod attach-window ((engine engine) window)
+  (setf (world-view engine)
+        (matrix:perspective (/ pi 2) *aspect* 0.1 100.0))
+
+  (glfw:def-window-size-callback update-viewport (window w h)
+    (declare (ignore window))
+    (setf *aspect* (/ w h))
+    (gl:viewport 0 0 w h)
+    (lambda ()
+      (setf (world-view engine)
+            (matrix:perspective (/ pi 2) *aspect* 0.1 100.0)))))
+
+
 (defun run (engine)
   (with-slots (init-functions system-functions cleanup-functions
                entities delta-time cursor-pos cursor-delta-pos)
@@ -74,6 +99,7 @@ which do not justify building an entirely new system"))
     (unwind-protect
          (progn
            (mapcar #'funcall init-functions)
+
            (let* (;; used to keep track of deltatime: first deltatime is 0
                   (time-1 (get-internal-real-time))
                   (time-2 time-1)
@@ -91,7 +117,7 @@ which do not justify building an entirely new system"))
                ;;(setf time time-2)
 
                ;; cursorpos
-               (setf cursor-delta-pos (vec- cursor-2 cursor-1))
+               (setf cursor-delta-pos (vec:- cursor-2 cursor-1))
                (setf cursor-1 cursor-2)
                (setf cursor-2 (get-cursor-pos))
                (setf cursor-pos cursor-2)

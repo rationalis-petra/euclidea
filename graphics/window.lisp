@@ -82,6 +82,12 @@
     shader-program))
     
 
+(defun set-uniform (uniform value)
+  (cond ((typep value 'matrix:matrix)
+         (gl:uniform-matrix-4fv uniform (matrix::matrix-data value)))
+        (t (error (format nil "called set-uniform with unsupported value: ~a ~%" value)))))
+
+
 (defun get-uniform (shader uniform-name)
   (gl:get-uniform-location shader uniform-name))
 

@@ -22,7 +22,8 @@
   (:documentation "A function which will get called on an entity every frame.
 Determines the behaviour of the physics system"))
 
-(defun physics-system (entities time)
+(defun physics-system (entities state)
+  (declare (ignore state))
   (mapcar #'physics-update entities))
 
 (defmethod physics-update ((e entity))
@@ -33,4 +34,4 @@ Determines the behaviour of the physics system"))
   (with-slots (position) e
     ;; when e is a model, update the model matrix
     (when (typep e 'model)
-      (setf (model-matrix e) (matrix-translate position)))))
+      (setf (model-matrix e) (matrix:translate position)))))

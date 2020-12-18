@@ -1,3 +1,17 @@
+;;;; Functions and structures for loading/handling meshes
+(defclass mesh ()
+  ((vertices
+    :type vector)
+   (texture-coordinates
+    :type vector)
+   (normals
+    :type vector)) 
+  (:documentation "A generic container class for storing raw mesh data."))
+
+(defgeneric to-vao (mesh))
+(defmethod to-vao ((mesh mesh)))
+
+
 ;; list = (a b c) -> (a b c)
 ;; list = (a b c d) -> (a b c c d a) (for square faces)
 ;; TODO: fix for n-dimensional... currently only works for 3 & 4

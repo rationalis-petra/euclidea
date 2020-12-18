@@ -21,13 +21,13 @@
     :initform (vector 1.0 1.0 1.0)
     :documentation "An rgb vector denoting the color of the model")
    (model-matrix
+    :type matrix:matrix
     :accessor model-matrix
-    :initform (matrix-identity)
+    :initform (matrix:identity 4)
     :documentation "A matrix describing rotation, tranlsation, scale"))
   
   (:documentation "Contains information needed by OpenGL to render an Object"))
 
-    
 
     
 
@@ -115,29 +115,27 @@
 
 
 
-(defgeneric draw (entity state)
+(defgeneric draw (entity world)
   (:documentation "a generic draw method"))
 
-(defmethod draw ((m entity) state))
+(defmethod draw ((m entity) world))
 
-(defmethod draw ((m model) state)
+(defmethod draw ((m model) world)
   (with-slots (shader texture color) m
     (gl:use-program shader)
 
     (gl:uniformfv (get-uniform shader "light_pos") (vector 0.0 5.0 0.0))
     (gl:uniformfv (get-uniform shader "object_color") color)
-    ;;(gl:uniformfv (get-uniform shader "view_pos") (camera-pos (model-camera m)))
 
     ;; model matrix
-    (gl:uniform-matrix-4fv (get-uniform shader "model") (model-matrix m))
+    (set-uniform (get-uniform shader "model") (model-matrix m))
 
     ;; view matrix
-    (gl:uniform-matrix-4fv (get-uniform shader "view") (gen-view-matrix (world-camera state)))
+    (set-uniform (get-uniform shader "view") (gen-view-matrix (world-camera world)))
 
     ;; perspective matrix
     ;; args to perspective: fov, aspect ratio near-plane z coord, far-plane z coord
-    (gl:uniform-matrix-4fv (get-uniform shader "projection")
-                           (matrix-perspective (/ pi 2) *aspect* 0.1 100.0)) 
+    (set-uniform (get-uniform shader "projection") (world-view world))
 
     ;; now actually draw the shape
     (when texture (gl:bind-texture :texture-2d texture))
@@ -152,9 +150,9 @@
 
 
 
-(defun render-system (entities state)
+(defun render-system (entities world)
   (poll-events)
-  (mapcar (lambda (x) (draw x state)) entities)
+  (mapcar (lambda (x) (draw x world)) entities)
   (display))
 
 

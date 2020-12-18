@@ -13,6 +13,7 @@
 (defvar *mouse-sensitivity* 0.1)
 
 (defun input-system (_ state)
+  (declare (ignore _))
   (let ((camera (world-camera state))
         (time (world-delta-time state)))
     (with-slots (position direction up) camera
@@ -22,32 +23,32 @@
              (forward (vector (* (sin theta) (cos phi))
                               (cos theta)
                               (* (sin theta) (sin phi))))
-             (right (vec-cross forward (camera-up camera))))
+             (right (vec:cross forward (camera-up camera))))
 
         ;; forward/backward 
         (when (key-is-pressed-p :w)
           (setf position
-                (vec+ position (vec-scale (* time *key-sensitivity*) forward))))
+                (vec:+ position (vec:scale (* time *key-sensitivity*) forward))))
         (when (key-is-pressed-p :s)
           (setf position
-                (vec+ position (vec-scale (* -1.0 time *key-sensitivity*) forward))))
+                (vec:+ position (vec:scale (* -1.0 time *key-sensitivity*) forward))))
 
         ;; left/right (x-coord)
         (when (key-is-pressed-p :a)
           (setf position
-                (vec+ position (vec-scale (* -1.0 time *key-sensitivity*) right))))
+                (vec:+ position (vec:scale (* -1.0 time *key-sensitivity*) right))))
         (when (key-is-pressed-p :d)
           (setf position
-                (vec+ position (vec-scale (* time *key-sensitivity*) right))))
+                (vec:+ position (vec:scale (* time *key-sensitivity*) right))))
 
         ;; up/down (y-coord)
         (when (key-is-pressed-p :space)
           (setf position
-                (vec+ position (vec-scale (* time *key-sensitivity*) up))))
+                (vec:+ position (vec:scale (* time *key-sensitivity*) up))))
         (when (key-is-pressed-p :left-shift)
           (setf position
-                (vec+ position
-                      (vec-scale (* -1.0 time *key-sensitivity*) up)))))
+                (vec:+ position
+                      (vec:scale (* -1.0 time *key-sensitivity*) up)))))
 
       (let ((delta-pos (world-cursor-delta-pos state)))
         ;; index 0 = x, affects phi = index 1
