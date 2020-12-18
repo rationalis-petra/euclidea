@@ -16,9 +16,9 @@
   (declare (ignore _))
   (let ((camera (world-camera state))
         (time (world-delta-time state)))
-    (with-slots (position direction up) camera
-      (let* ((theta (elt (camera-direction camera) 0))
-             (phi   (elt (camera-direction camera) 1))
+    (with-slots (position polar-direction up) camera
+      (let* ((theta (elt (camera-polar-direction camera) 0))
+             (phi   (elt (camera-polar-direction camera) 1))
              ;; calculate a 'forward' and 'right' vectors based on the camera's direction
              (forward (vector (* (sin theta) (cos phi))
                               (cos theta)
@@ -52,6 +52,6 @@
 
       (let ((delta-pos (world-cursor-delta-pos state)))
         ;; index 0 = x, affects phi = index 1
-        (incf (elt direction 0) (* (elt delta-pos 1) time *mouse-sensitivity*))
+        (incf (elt polar-direction 0) (* (elt delta-pos 1) time *mouse-sensitivity*))
         ;; index 1 = y, affects theta = index 0
-        (incf (elt direction 1) (* (elt delta-pos 0) time *mouse-sensitivity*))))))
+        (incf (elt polar-direction 1) (* (elt delta-pos 0) time *mouse-sensitivity*))))))

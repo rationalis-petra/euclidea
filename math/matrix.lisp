@@ -10,7 +10,7 @@
    :matrix
    :identity :scale :rotate :translate
    :look-at :perspective :detailed-perspective
-   :+ :* :apply))
+   :+ :* :apply :inverse :det))
 
 (in-package :matrix)
 
@@ -76,13 +76,66 @@
   (assert (= (matrix-cols matrix) (length vector)))
 
   (let ((result (make-array (matrix-rows matrix) :initial-element 0.0 :element-type 'float)))
-    (loop for i from 0 to (matrix-rows matrix) do
+    (loop for i from 0 while (< i (matrix-rows matrix)) do
       (setf (aref result i)
-            (loop for j from 0 to (length vector)
+            (loop for j from 0 while (< j (length vector))
                   summing (cl:* (mref matrix i j) (aref vector j)) into val
                   finally (return val)))
             finally (return result))))
 
+(defun minor (m i j)
+  "The matrix but with row i, column j removed"
+  (let* ((rows (cl:- (matrix-rows m) 1))
+         (cols (cl:- (matrix-cols m) 1))
+         (out (make-matrix
+               :rows rows
+               :cols cols
+               :data (make-array (cl:* rows cols) :initial-element 0.0 :element-type 'float))))
+    (loop for k from 0 while (< k rows) do
+      (loop for l from 0 while (< l cols) do
+        ;; calculate index into the 'base' matrix
+        ;; this is just adding 1 to k if k >= i, and the same for j & l
+        (setf (mref out k l)
+              (mref m
+                    (if (>= k i) (cl:+ k 1) k)
+                    (if (>= l j) (cl:+ l 1) l)))))
+    (det out)))
+
+
+(defun cofactor (m i j)
+  "Calculates the cofactor of matrix element i j"
+  (declare (type matrix m) (type integer i j))
+  (if (evenp (cl:+ i j))
+      (minor m i j)
+      (cl:* -1.0 (minor m i j))))
+
+(defun det (matrix)
+  "Calculates the determinant of the matrix"
+  (with-slots (rows cols data) matrix
+    (when (not (= rows cols)) (error "Cannot calculate determinant of non-square matrix"))
+    (if (and (= rows 1) (= cols 1))
+        (aref data 0)
+        (loop for i from 0 while (< i rows)
+              summing (cl:* (mref matrix 0 i)
+                            (cofactor matrix 0 i))
+                into total
+              finally (return total)))))
+
+
+(defun inverse (matrix)
+  "Calculates the inverse of a matrix, returns an error if non exists"
+  (declare (type matrix matrix))
+  (when (= (det matrix) 0.0) (error "Attempt to compute inverse of matrix with det 0"))
+  (with-slots (rows cols data) matrix
+    (let ((det (det matrix))
+          (out (make-matrix
+                :rows rows
+                :cols cols
+                :data (make-array (cl:* rows cols) :initial-element 0.0 :element-type 'float))))
+      (loop for i from 0 while (< i rows) do
+        (loop for j from 0 while (< j cols) do
+          (setf (mref out i j) (/ (cofactor matrix j i) det))))
+      out)))
 
 
 
@@ -134,7 +187,7 @@
              (cl:+ (cl:* (cos z) (sin y) (cos x)) (cl:* (sin z) (sin x)))
              0.0
              (cl:* (sin z) (cos y))
-             (cl:+ (cl:* (sin z) (sin y) (sin x)) (cl:* (cos z) (cos z)))
+             (cl:+ (cl:* (sin z) (sin y) (sin x)) (cl:* (cos z) (cos x)))
              (cl:- (cl:* (sin z) (sin y) (cos x)) (cl:* (cos z) (sin x)))
              0.0
              (cl:- (sin y))
@@ -218,5 +271,6 @@
            0.0
            -1.0
            0.0)))
+
 
 

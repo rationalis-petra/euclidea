@@ -59,10 +59,10 @@
    *engine* 
    (lambda ()
      (let ((portal-1 (make-instance 'portal
-                           :position #(2.0 0.0 0.0)))
+                                    :position #(2.0 0.0 0.0)))
            (portal-2 (make-instance 'portal
-                           :rotation (vector 0.0 pi 0.0)
-                           :position #(-2.0 0.0 0.0))))
+                                    :rotation (vector 0.0 (/ pi 2) 0.0)
+                                    :position #(0.0 0.0 2.0))))
        (connect-portals portal-1 portal-2)
        (setf (world-entities *engine*)
              (list
@@ -74,8 +74,8 @@
                                             :color #(0.0 0.0 0.8))
               (make-instance 'rotating-cube :position #(0.0 0.0 -50.0)
                                             :color #(0.8 0.0 0.8))
-              ;; portal-1
-              ;; portal-2
+              portal-1
+              portal-2
               ;; (make-tunnel (vector 10 0 0))
               (make-hollow-cube (vector 0.0 0.0 0.0)))))))
    (run *engine*))

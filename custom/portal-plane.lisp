@@ -13,10 +13,10 @@
     :type (unsigned-byte 32)
     :documentation "A Handle to an OpenGL Framebuffer Object")
    (vertices
-    :type (vector (vector float 3) 2)
+    :type list
     :accessor portal-vertices
     :initarg :plane-vertices
-    :initform (vector
+    :initform (list
                #(0.666667 0.666667 0.666666)
                #(0.666667 -0.666667 -0.666666))
     :documentation "The *transformed* vertices of the portal plane: (bl, tr)")
@@ -26,14 +26,16 @@
     :documentation "A datastructure describing how two portals are connected")
 
    (forward
-    :initform #(1.0 0.0 0.0)
     :type (vector float 3)
+    :initform #(1.0 0.0 0.0)
     :reader portal-forward)
    (up
     :type (vector float 3)
+    :initform #(0.0 1.0 0.0)
     :reader portal-up)
    (right
     :type (vector float 3)
+    :initform #(0.0 0.0 1.0)
     :reader portal-right))
   (:documentation "A plane which displays the scene as rendered from a different location"))
 
@@ -64,10 +66,9 @@
                   :portal-from portal-from
                   :portal-to portal-to
                   :delta
-                  ;;(matrix:
                    (matrix:*
-                    (calc-model-matrix portal-to :translation nil)
-                    (calc-model-matrix portal-from :translation nil))))))
+                    (matrix:inverse (calc-model-matrix portal-to))
+                    (calc-model-matrix portal-from))))))
 
     (connect-portals p1 p2)
     (connect-portals p2 p1)))
@@ -80,12 +81,15 @@
     (make-instance 'rectangular-camera
                    :position
                    (vec:+
-                    (matrix:apply delta
-                                   (vec:- (transform-position portal-from)
-                                         (camera-pos world-cam)))
+                    (vec:vec3
+                     (matrix:apply delta
+                                   (vec:vec4
+                                    (vec:- (transform-position portal-from)
+                                           (camera-pos world-cam))
+                                    1.0)))
                     (transform-position portal-to))
                    :direction
-                   (vec:normalize (matrix:apply delta (camera-direction world-cam)))
+                   (vec:normalize (slot-value portal-to 'forward))
                    :up
                    #(0.0 1.0 0.0))))
 
@@ -95,12 +99,15 @@
     (destructuring-bind (top-left bottom-right)
         ;; vertices will be in /absolute/ coords. get as relative to the trans-cam
         ;; in terms of the normal, right, up
-        (map 'vector
-             (lambda (vertex)
-               (matrix:apply (calc-model-matrix portal-to :translation nil)
-                             (vec:- vertex
-                                    (camera-pos trans-cam))))
-             (portal-vertices portal-to))
+        (mapcar
+         (lambda (vertex)
+           (vec:vec3
+            (matrix:apply (calc-model-matrix portal-to :translation nil)
+                          (vec:vec4 
+                           (vec:- vertex
+                                  (camera-pos trans-cam))
+                           1.0))))
+         (portal-vertices portal-to))
       (let ((up (portal-up portal-to))
             (right (portal-right portal-to))
             (forward (portal-forward portal-to)))
@@ -115,9 +122,21 @@
 
 
 (defmethod initialize-instance ((portal portal) &key)
-  (call-next-method)
+  (call-next-method) ; like doing super()
   (setf (model-shader portal) *portal-shader*)
   (make-vao portal (load-obj #p"resources/meshes/portal-plane.obj" :texture-p t))
+
+  ;; use the transformation matrix to adjust the vectors: up, forward, right
+  ;; we deliberately ignore the trasnlation transform because we only care about 
+  ;; rotation, scale, ...
+  (with-slots (up forward right) portal
+    (let ((transform (calc-model-matrix portal :translation nil)))
+      ;; you'll notice that for up, forward, right, we first extend them to be a vec4,
+      ;; then reduce them back to a vec3
+      (setf up (vec:vec3 (matrix:apply transform (vec:vec4 up 1.0))))
+      (setf forward (vec:vec3 (matrix:apply transform (vec:vec4 forward 1.0))))
+      (setf right (vec:vec3 (matrix:apply transform (vec:vec4 right 1.0))))))
+
 
   (let ((rbo nil))
     (with-slots (model-matrix shader fbo texture) portal
@@ -170,7 +189,7 @@
       (setf (world-camera world) (get-portal-camera warp camera))
       (setf (world-view world) (get-portal-view warp (world-camera world)))
 
-      ;; change the projection matrix so 
+      ;;change the projection matrix so 
       (mapcar (lambda (e) (unless (typep e 'portal) (draw e world)))
               (world-entities world))
 

@@ -2,7 +2,8 @@
   (:use :cl)
   (:shadow common-lisp::- common-lisp::+)
   (:export
-   :+ :- :dot :cross :scale :normalize :magnitude))
+   :+ :- :dot :cross :scale :normalize :magnitude
+   :vec4 :vec3))
 
 (in-package :vec)
 
@@ -58,3 +59,10 @@
       (* (aref left 1) (aref right 0)))))
 
 
+
+;;; Vector constructors
+(defun vec4 (vec num)
+  (concatenate 'vector vec (vector num)))
+
+(defun vec3 (vec)
+  (subseq vec 0 3))
