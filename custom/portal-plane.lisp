@@ -84,8 +84,8 @@
                   :portal-to portal-to
                   :delta
                    (matrix:*
-                    (calc-model-matrix portal-to)
-                    (matrix:inverse (calc-model-matrix portal-from)))))))
+                    (calc-model-matrix portal-to :scale nil)
+                    (matrix:inverse (calc-model-matrix portal-from :scale nil)))))))
 
     (connect-portals p1 p2)
     (connect-portals p2 p1)))
@@ -124,8 +124,8 @@
         (matrix:detailed-perspective
          (vec:dot up top-left)          ;; top
          (vec:dot up bottom-right)      ;; bottom
-         (vec:dot right bottom-right)   ;; right
          (vec:dot right top-left)       ;; left
+         (vec:dot right bottom-right)   ;; right
          (vec:dot forward bottom-right)
          (+ (vec:dot forward bottom-right) 100.0))))))
 
@@ -135,15 +135,16 @@
   (call-next-method) ; like doing super()
   (setf (model-shader portal) *portal-shader*)
 
-  (setf (portal-cube portal) (make-instance 'portal-cube))
+  ;; the portal cube is a visualisation of the virtual camera position
+  ;;(setf (portal-cube portal) (make-instance 'portal-cube))
 
   (make-vao portal (load-obj #p"resources/meshes/portal-plane.obj" :texture-p t))
 
   ;; use the transformation matrix to adjust the vectors: up, forward, right
-  ;; we deliberately ignore the trasnlation transform because we only care about 
-  ;; rotation, scale, ...
+  ;; we deliberately ignore the translation transform because we only care about 
+  ;; rotation, ...
   (with-slots (up forward right) portal
-    (let ((transform (calc-model-matrix portal :translation nil)))
+    (let ((transform (calc-model-matrix portal :translation nil :scale nil)))
       ;; you'll notice that for up, forward, right, we first extend them to be a vec4,
       ;; then reduce them back to a vec3
       (setf up (vec:vec3 (matrix:apply transform (vec:vec4 up 1.0))))
@@ -156,7 +157,7 @@
            (lambda (vertex)
              (vec:vec3
               (matrix:apply
-               (calc-model-matrix portal)
+               (calc-model-matrix portal :scale nil)
                (vec:vec4 vertex 1.0))))
            vertices)))
 
@@ -207,8 +208,8 @@
     (let* ((camera (world-camera world))
            (view (world-view world)))
 
-      (setf (transform-position (portal-cube portal)) (camera-pos (get-portal-camera warp camera)))
-      (draw (portal-cube portal) world)
+      ;;(setf (transform-position (portal-cube portal)) (camera-pos (get-portal-camera warp camera)))
+      ;;(draw (portal-cube portal) world)
 
       (gl:bind-framebuffer :framebuffer fbo)
       (gl:clear :color-buffer :depth-buffer)

@@ -10,6 +10,7 @@
   
 
 (defmethod initialize-instance ((cube rotating-cube) &key)
+  (setf (transform-scale cube) #(0.5 0.5 0.5))
   (make-vao cube (load-obj #p"resources/meshes/cube.obj" :normal-p t))
   (call-next-method))
 
@@ -32,6 +33,13 @@
                                       (matrix:scale (vector 2.0 2.0 2.0))))
     hollow-cube))
 
+(defun make-box (position rotation)
+  (let ((box (make-instance 'model)))
+    (make-vao box (load-obj #p"resources/meshes/box.obj" :normal-p t))
+    (setf (model-matrix box) (matrix:*
+                                      (matrix:translate position)
+                                      (matrix:rotate rotation)))
+    box))
 
 (defun main ()
   (setf *engine* (make-instance 'engine))
@@ -44,10 +52,11 @@
    *engine* 
    (lambda ()
      (let ((portal-1 (make-instance 'portal
-                                    :position #(46.0 0.0 0.0)
+                                    :position #(49.0 0.0 0.0)
                                     :rotation (vector 0.0 0.0 0.0)))
            (portal-2 (make-instance 'portal
                                     :rotation (vector 0.0 (/ pi 2) 0.0)
+                                    :scale #(1.3333334 1.3333334 1.3333334)
                                     :position #(0.0 0.0 2.0))))
        (setf (model-color (portal-cube portal-1)) #(1.0 0.0 0.0))
        (setf (model-color (portal-cube portal-2)) #(0.0 1.0 0.0))
@@ -65,6 +74,10 @@
               portal-1
               portal-2
               ;; (make-tunnel (vector 10 0 0))
+              (make-box #(50.0 0.0 0.0) (vector 0.0 (/ pi -2) 0.0))
+              (make-box #(-50.0 0.0 0.0) (vector 0.0 (/ pi 2) 0.0))
+              (make-box #(0.0 0.0 50.0) (vector 0.0 pi 0.0))
+              (make-box #(0.0 0.0 -50.0) #(0.0 0.0 0.0))
               (make-hollow-cube (vector 0.0 0.0 0.0)))))))
    (run *engine*))
 
