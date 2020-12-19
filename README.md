@@ -7,7 +7,7 @@ An attempt to use OpenGL to re-create various types of noneucliedean spaces, as 
 - [x] Rendering to Framebuffer
 - [x] Framebuffer as Texture
 - [x] Camera changes in portal-plane
-- [ ] Arbitrary portal direction & direction fixes 
-- [ ] Partial Transparency
+- [X] Arbitrary portal direction & direction fixes 
 - [ ] Pretty Shaders
-- [ ] Collisions via ODE solver
+- [ ] Teleportation through portals
+- [ ] Lighting through portals
