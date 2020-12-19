@@ -123,26 +123,27 @@
 (defmethod draw ((m entity) world))
 
 (defmethod draw ((m model) world)
-  (with-slots (shader texture color) m
-    (gl:use-program shader)
+  (with-slots (camera) world
+    (gl:viewport 0 0 (camera-width camera) (camera-height camera))
+    (with-slots (shader texture color) m
+      (gl:use-program shader)
 
-    (gl:uniformfv (get-uniform shader "light_pos") (vector 0.0 5.0 0.0))
-    (gl:uniformfv (get-uniform shader "object_color") color)
+      (gl:uniformfv (get-uniform shader "light_pos") (vector 0.0 5.0 0.0))
+      (gl:uniformfv (get-uniform shader "object_color") color)
 
-    ;; model matrix
-    (set-uniform (get-uniform shader "model") (model-matrix m))
+      ;; model matrix
+      (set-uniform (get-uniform shader "model") (model-matrix m))
 
-    ;; view matrix
-    (set-uniform (get-uniform shader "view") (gen-view-matrix (world-camera world)))
+      ;; view matrix
+      (set-uniform (get-uniform shader "view") (gen-view-matrix camera))
 
-    ;; perspective matrix
-    ;; args to perspective: fov, aspect ratio near-plane z coord, far-plane z coord
-    (set-uniform (get-uniform shader "projection") (world-view world))
+      ;; perspective matrix
+      (set-uniform (get-uniform shader "projection") (camera-projection camera))
 
-    ;; now actually draw the shape
-    (when texture (gl:bind-texture :texture-2d texture))
-    (gl:bind-vertex-array (model-vao m))
-    (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count (model-size m))))
+      ;; now actually draw the shape
+      (when texture (gl:bind-texture :texture-2d texture))
+      (gl:bind-vertex-array (model-vao m))
+      (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count (model-size m)))))
 
 
 

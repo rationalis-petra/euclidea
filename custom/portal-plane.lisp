@@ -4,7 +4,6 @@
   (setf *portal-shader* (new-shader-program "resources/shaders/portal")))
 
 
-
 ;; the primary purpose of a portal is to store a Warp, which is a datastructure
 ;; describing how two portals are connected.
 ;; it also golds a framebuffer and a 
@@ -79,39 +78,49 @@
 (defgeneric get-portal-camera (warp world-camera))
 (defmethod get-portal-camera((warp warp) (world-cam camera))
   (with-slots (portal-from portal-to delta) warp
-    (make-instance 'rectangular-camera
-                   :position
-                   (vec:vec3
-                    (matrix:apply delta
-                                  (vec:vec4
-                                   (camera-pos world-cam)
-                                   1.0)))
-                   :direction
-                   (vec:scale -1.0 (vec:normalize (slot-value portal-to 'forward)))
-                   :up
-                   #(0.0 1.0 0.0))))
-
-(defgeneric get-portal-view (warp world-camera))
-(defmethod get-portal-view ((warp warp) (trans-cam camera))
-  (with-slots (portal-to) warp 
-    (destructuring-bind (top-left bottom-right)
-        ;; vertices will be in /absolute/ coords. get as relative to the trans-cam
-        ;; in terms of the normal, right, up
-        (mapcar
-         (lambda (vertex)
-           (vec:- vertex
-                  (camera-pos trans-cam)))
-         (portal-vertices portal-to))
-      (let ((up (portal-up portal-to))
-            (right (portal-right portal-to))
-            (forward (portal-forward portal-to)))
-        (matrix:detailed-perspective
-         (vec:dot up top-left)          ;; top
-         (vec:dot up bottom-right)      ;; bottom
-         (vec:dot right top-left)       ;; left
-         (vec:dot right bottom-right)   ;; right
-         (vec:dot forward bottom-right)
-         (+ (vec:dot forward bottom-right) 100.0))))))
+    (let ((trans-cam
+            (make-instance 'rectangular-camera
+                           :position
+                           (vec:vec3
+                            (matrix:apply delta
+                                          (vec:vec4
+                                           (camera-pos world-cam)
+                                           1.0)))
+                           :direction
+                           ;; we want to be facing the same direction /relative/ to the normal of the 
+                           ;; portal
+                           (if (< 0 (vec:dot (portal-forward portal-from)
+                                             (vec:-
+                                              (transform-position portal-from)
+                                              (camera-pos world-cam))))
+                               (vec:scale -1.0 (vec:normalize (slot-value portal-to 'forward)))
+                               (vec:normalize (slot-value portal-to 'forward)))
+                           :up
+                           #(0.0 1.0 0.0)
+                           :width
+                           512
+                           :height
+                           512)))
+      (setf (camera-projection trans-cam)
+            (destructuring-bind (top-left bottom-right)
+                ;; vertices will be in /absolute/ coords. get as relative to the trans-cam
+                ;; in terms of the normal, right, up
+                (mapcar
+                 (lambda (vertex)
+                   (vec:- vertex
+                          (camera-pos trans-cam)))
+                 (portal-vertices portal-to))
+              (let ((up (portal-up portal-to))
+                    (right (portal-right portal-to))
+                    (forward (portal-forward portal-to)))
+                (matrix:detailed-perspective
+                 (vec:dot up top-left)          ;; top
+                 (vec:dot up bottom-right)      ;; bottom
+                 (vec:dot right top-left)       ;; left
+                 (vec:dot right bottom-right)   ;; right
+                 (vec:dot forward bottom-right)
+                 (+ (vec:dot forward bottom-right) 100.0)))))
+      trans-cam)))
 
 
 
@@ -184,26 +193,22 @@
 
 (defmethod draw ((portal portal) (world engine))
   (with-slots (fbo texture shader position warp) portal
-    ;; generate the texture to load
 
-    (let* ((camera (world-camera world))
-           (view (world-view world)))
+    ;; generate the texture to load
+    (let* ((camera (world-camera world)))
 
       ;;(setf (transform-position (portal-cube portal)) (camera-pos (get-portal-camera warp camera)))
       ;;(draw (portal-cube portal) world)
 
       (gl:bind-framebuffer :framebuffer fbo)
       (gl:clear :color-buffer :depth-buffer)
-      (gl:viewport 0 0 512 512)
 
       (setf (world-camera world) (get-portal-camera warp camera))
-      (setf (world-view world) (get-portal-view warp (world-camera world)))
 
       ;;change the projection matrix so 
       (mapcar (lambda (e) (unless (typep e 'portal) (draw e world)))
               (world-entities world))
 
-      (setf (world-view world) view)
       (setf (world-camera world) camera))
 
     (gl:bind-framebuffer :framebuffer 0)

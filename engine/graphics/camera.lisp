@@ -12,14 +12,30 @@
 (defclass camera ()
   ((position
     :accessor camera-pos
+    :type (vector float 3)
     :initarg :position
     :initform (vector 0.0 0.0 0.0)
     :documentation "The position of the camera")
    (up
     :accessor camera-up
+    :type (vector float 3)
     :initarg :up
     :initform (vector 0.0 1.0 0.0)
-    :documentation "Gives the orientation of the camera"))
+    :documentation "Gives the orientation of the camera")
+   (projection
+    :accessor camera-projection
+    :type matrix:matrix
+    :initarg :view
+    :documentation "The projection matrix for the camera")
+
+   (width
+    :type fixnum
+    :initarg :width
+    :accessor camera-width)
+   (height
+    :type fixnum
+    :initarg :height
+    :accessor camera-height))
   (:documentation "A class describing a camera, used to generate view matrices"))
 
 ;; (defmethod initialize-instance ((camera camera) &key)

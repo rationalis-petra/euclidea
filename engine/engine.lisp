@@ -54,12 +54,9 @@ which do not justify building an entirely new system"))
     :initform nil
     :documentation "The objectes which the simulation engine will operate on")
    (camera
+    :type camera
     :accessor world-camera
     :initform (make-instance 'polar-camera)
-    :documentation "The default camera. It is from this perspective that a model will be rendered")
-   (view
-    :accessor world-view
-    :initform (matrix:identity 4)
     :documentation "The default camera. It is from this perspective that a model will be rendered")
 
    ;; variables relating to input/output (incl. time)
@@ -79,16 +76,18 @@ which do not justify building an entirely new system"))
 
 
 (defmethod attach-window ((engine engine) window)
-  (setf (world-view engine)
-        (matrix:perspective (/ pi 2) *aspect* 0.1 100.0))
+  (with-slots (width height projection) (world-camera engine)
+    (setf projection (matrix:perspective (/ pi 2) 16/9 0.1 100))
+    (setf width 1280)
+    (setf height 720))
 
   (glfw:def-window-size-callback update-viewport (window w h)
     (declare (ignore window))
-    (setf *aspect* (/ w h))
-    (gl:viewport 0 0 w h)
     (lambda ()
-      (setf (world-view engine)
-            (matrix:perspective (/ pi 2) *aspect* 0.1 100.0)))))
+      (with-slots (width height) (world-camera engine)
+        (setf projection (matrix:perspective (/ pi 2) (/ w h) 0.1 100))
+        (setf width w)
+        (setf height h)))))
 
 
 (defun run (engine)
