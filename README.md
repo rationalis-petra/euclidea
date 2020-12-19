@@ -1,5 +1,5 @@
 # euclidea
-An attempt to use OpenGL to re-create various types of noneucliedean spaces, as seen in the games Antichamber and Manifold Garden. This effect is primarily achieved through seamless 'portals'.
+An attempt to use OpenGL to re-create graphical effects from noneuclidean games, e.g. Antichamber and Manifold Garden. This effect is primarily achieved through seamless 'portals'.
 
 
 ## Currently Unimplemented
