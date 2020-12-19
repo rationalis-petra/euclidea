@@ -1,19 +1,18 @@
-
-;; (defun input-system (camera) 
-;;   (when (key-is-pressed :w)
-;;     (incf (aref (camera-pos camera) 2) 1.0))
-;;   (when (key-is-pressed :s)
-;;     (incf (aref (camera-pos camera) 2) 1.0))
-;;   (when (key-is-pressed :a)
-;;     (incf (aref (camera-pos camera) 0) 1.0))
-;;   (when (key-is-pressed :d)
-;;     (incf (aref (camera-pos camera) 0) 1.0)))
+;;;; INPUT SYSTEM
+;; this is a simple file containing the input system function
+;; it does nothing /except/ update the user's camera location
+;; based on keyboard/mouse input
 
 (defvar *key-sensitivity* 5.0)
 (defvar *mouse-sensitivity* 0.1)
 
-(defun input-system (_ state)
-  (declare (ignore _))
+(defun input-system (entities state)
+  (declare (ignore entities))
+  ;; we only want to update the (global) camera, which is a polar-camera 
+  ;; we use key-presses of wasd/shift/space to adjust the position of the camera
+  ;; and the up/sideways movement of the camera to change the polar and azimuthal
+  ;; angles, respectively
+  ;; the wasd keys will move the camera relative to it's forward/right vector
   (let ((camera (world-camera state))
         (time (world-delta-time state)))
     (with-slots (position polar-direction up) camera

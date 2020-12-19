@@ -1,20 +1,14 @@
-;;;; Functions and structures for loading/handling meshes
-(defclass mesh ()
-  ((vertices
-    :type vector)
-   (texture-coordinates
-    :type vector)
-   (normals
-    :type vector)) 
-  (:documentation "A generic container class for storing raw mesh data."))
+;;;; MESH LOADER
+;; This file contains the function load-obj, which will load .obj files into a plist
+;; format, with vertex, normal & texture coordinates /and/ indexes into each of them
+;; it is in *no way* a good or correct implementation, I just needed to hack something
+;; together that would allow me to use blender to make 3D models
+;; because of this, it isn't well documented, but that may change if I decide to put
+;; more effort into this part of the project
 
-(defgeneric to-vao (mesh))
-(defmethod to-vao ((mesh mesh)))
-
-
-;; list = (a b c) -> (a b c)
+;; list = (a b c) -> (a b c) (triangles become triangles)
 ;; list = (a b c d) -> (a b c c d a) (for square faces)
-;; TODO: fix for n-dimensional... currently only works for 3 & 4
+;; TODO: fix for n-vertex faces currently only works for 3 & 4
 (defun to-triples (data)
   "function which takes a face of n vertices & decomposes it into triangles"
   (if (= (length data) 3) data

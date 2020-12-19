@@ -1,6 +1,14 @@
-;;;; Math file: for opengl/physics math helper functions
+;;;; MATRIX
+;; This file is self-explanatory: contains functions which manipulate matrices
+;; as well as create various types of matrix relevant to 3D graphics: rotation,
+;; scale, ... Generally, will create 4x4 matrices, but can operate on matrices
+;; of any size
+;; As elsewhere, we use floats: both for efficiency purposes and smooth OpenGL
+;; interop
+;; because we define '+' and '-', you'll notice we prefix number
+;; operations with 'cl:', because they are in the common lisp
+;; package
 
-(declaim (optimize (speed 3))) ;; debug 0 safety 0
 
 (defpackage :matrix
   (:use :cl :vec)
@@ -14,7 +22,7 @@
 
 (in-package :matrix)
 
-;;; Matrix Details
+;;; MATRIX STRUCT
 ;; The matrix is defined as a struct because structs will allow for more optimization later on
 ;; Data is stored in a row-major order
 (declaim (inline make-matrix))
@@ -32,10 +40,11 @@
   (setf (aref (matrix-data matrix) (cl:+ j (cl:* i (matrix-cols matrix)))) new))
 (defsetf mref mref-upd)
 
-;;; these functions perform matrix operations
+;;; MATRIX OPERATIONS
+;;; Functions for manipulating matrices: multiplication, addition, etc.
 (defun * (&rest args)
   "Performs standard matrix multiplication for n x m and m x k matrices"
-
+  ;; we define a function that multiplies two matrices
   (flet ((two-times (left right)
            (assert (= (matrix-cols left) (matrix-rows right)))
            (let ((out (make-matrix
@@ -51,11 +60,11 @@
                            (mref left i k)
                            (mref right k j))))))
               out)))
+    ;; call reduce so that '*' will generalise to any number of matrices
     (reduce #'two-times args)))
 
-
 (defun + (left right)
-  "Adds two matrices together: Assumes that they are 4x4"
+  "Adds two matrices together"
   (declare (type matrix left right))
   (assert (and (= (matrix-cols left) (matrix-cols right))
                (= (matrix-rows left) (matrix-rows right))))
@@ -72,6 +81,7 @@
 (defun apply (matrix vector)
   "Multiplies a nxn matrix and a nx1 vector"
 
+  ;; note the difference to the '*' function: the vector is a lisp vector, not a matrix struct!
   (declare (type matrix matrix) (type vector vector))
   (assert (= (matrix-cols matrix) (length vector)))
 
@@ -84,7 +94,7 @@
             finally (return result))))
 
 (defun minor (m i j)
-  "The matrix but with row i, column j removed"
+  "Determinant of the matrix m with row i, column j removed"
   (let* ((rows (cl:- (matrix-rows m) 1))
          (cols (cl:- (matrix-cols m) 1))
          (out (make-matrix
@@ -103,14 +113,14 @@
 
 
 (defun cofactor (m i j)
-  "Calculates the cofactor of matrix element i j"
+  "Calculates the cofactor of matrix element i j: the signed minor"
   (declare (type matrix m) (type integer i j))
   (if (evenp (cl:+ i j))
       (minor m i j)
       (cl:* -1.0 (minor m i j))))
 
 (defun det (matrix)
-  "Calculates the determinant of the matrix"
+  "Calculates the determinant of the matrix: returns an error if it cannot be calculated"
   (with-slots (rows cols data) matrix
     (when (not (= rows cols)) (error "Cannot calculate determinant of non-square matrix"))
     (if (and (= rows 1) (= cols 1))
@@ -123,7 +133,7 @@
 
 
 (defun inverse (matrix)
-  "Calculates the inverse of a matrix, returns an error if non exists"
+  "Calculates the inverse of a matrix, returns an error if none exists"
   (declare (type matrix matrix))
   (when (= (det matrix) 0.0) (error "Attempt to compute inverse of matrix with det 0"))
   (with-slots (rows cols data) matrix
@@ -140,7 +150,8 @@
 
 
 
-;;; These functions are matrix generation functions, which create matrices of various types
+;;; GENERATION FUNCTIONS
+;; these functions will generate various types of matrices
 (defun identity (dim)
    (let ((matrix (make-matrix
                   :rows dim

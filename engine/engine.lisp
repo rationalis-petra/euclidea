@@ -1,9 +1,17 @@
-;; load components.lisp
-;; load cl-glfw
-;; load cl-opengl
-;; files:
-;; graphics.lisp
-;; render-system.lisp
+;;;; ENGINE.LISP
+;; This file details an extremely simpe render engine (for the OpenGl code, see
+;; engine/graphics/render-system.lisp) The engine has a set of functions that
+;; it will call
+;; + on initialization
+;; + on update
+;; + on cleanup/finish (using unwind-protect)
+;; in addition, the engine contains several state variables:
+;; + a list of entites
+;; + a camera (see engine/graphics/camera.lisp)
+;; + update & input values: delta-time, cursor position, ...
+
+
+;; load libraries
 (ql:quickload '(cl-glfw3 cl-opengl array-operations split-sequence bordeaux-threads))
 
 (defclass entity () ()
@@ -16,30 +24,33 @@ which do not justify building an entirely new system"))
 (defgeneric attach-window (engine window)
   (:documentation "An engine will render to an attached window: can only have one attached window at a time"))
 
+;; if the entity subclass does not implemnt update, do nothing
+(defmethod update ((entity entity) state))
 
-
-
-
-(defmethod update ((entity entity) state) nil)
-
+;; load math utilities
 (load "engine/math/vector.lisp")
 (load "engine/math/matrix.lisp")
-(load "engine/math/transform.lisp")
 
+;; graphics stuff
+(load "engine/graphics/transform.lisp")
 (load "engine/graphics/window.lisp")
 (load "engine/graphics/camera.lisp")
 (load "engine/graphics/mesh-loader.lisp")
 (load "engine/graphics/render-system.lisp")
 
+;; basic input
 (load "engine/input/input-system.lisp")
 
 
 (defclass engine ()
+  ;; as mentioned at the beginning of the file, the engine contains three lists of functions
   ((init-functions
+    :type list
     :accessor engine-init-funcs
     :initform (list (lambda () (attach-window *engine* (new-window 1280 720))) #'render-init)
     :documentation "Methods which initialize resources etc. Take 0 arguments")
    (system-functions
+    :type list
     :accessor engine-system-funcs
     :initform (list #'input-system #'render-system)
     :documentation "Methods which are called every frame. Take 2 arguments: an entity list & the engine")
@@ -48,8 +59,9 @@ which do not justify building an entirely new system"))
     :initform (list (lambda () (delete-window)))
     :documentation "Methods which cleanup resources, etc. Guaranteed to be called via unwind-protect")
 
-   ;; Variables relating to 
+   ;; The engine also contains several variables relating to world-state. these are specified here
    (entities
+    :type list
     :accessor world-entities
     :initform nil
     :documentation "The objectes which the simulation engine will operate on")
@@ -58,29 +70,34 @@ which do not justify building an entirely new system"))
     :accessor world-camera
     :initform (make-instance 'polar-camera)
     :documentation "The default camera. It is from this perspective that a model will be rendered")
-
-   ;; variables relating to input/output (incl. time)
    (delta-time
+    :type float
     :accessor world-delta-time
     :initform 0.0
     :documentation "Time since last main-loop iteration, in seconds")
    (cursor-pos
+    :type (vector fixnum 2)
     :accessor world-cursor-pos
     :initform (vector 0 0)
     :documentation "The coordinates of the cursor")
    (cursor-delta-pos
+    :type (vector fixnum 2)
     :accessor world-cursor-delta-pos
     :initform (vector 0 0)
     :documentation "The change in location of the cursor since last main-loop iteration"))
    (:documentation "Encapsulates the necessary state & methods to run a simulation"))
 
 
+;; attach a glfw window to the engine instance. May update the (currently clunky)
+;; way of handling windows: they are just a raw glfw window handle at the moment
 (defmethod attach-window ((engine engine) window)
   (with-slots (width height projection) (world-camera engine)
     (setf projection (matrix:perspective (/ pi 2) 16/9 0.1 100))
     (setf width 1280)
     (setf height 720))
 
+  ;; set the window size callback to adjust height/width of the viewport
+  ;; and aspect ratio, accordingly
   (glfw:def-window-size-callback update-viewport (window w h)
     (declare (ignore window))
     (lambda ()
@@ -90,6 +107,7 @@ which do not justify building an entirely new system"))
         (setf height h)))))
 
 
+;; The run method is a function because we don't want it being overriden
 (defun run (engine)
   (with-slots (init-functions system-functions cleanup-functions
                entities delta-time cursor-pos cursor-delta-pos)
@@ -127,7 +145,8 @@ which do not justify building an entirely new system"))
 
       (mapcar #'funcall cleanup-functions))))
 
-
+;; a simple utility function to add an init method to the engine. This lets us
+;; more easily create entities of various types on startup
 (defun add-init-func (engine func)
   (with-slots ((in-fns init-functions)) engine
     (setf in-fns (append in-fns (list func)))))
