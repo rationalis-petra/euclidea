@@ -4,6 +4,17 @@
   (setf *portal-shader* (new-shader-program "resources/shaders/portal")))
 
 
+(defclass portal-cube (model transform)
+  ())
+    
+(defmethod initialize-instance ((cube portal-cube) &key)
+  (call-next-method)
+  (make-vao cube (load-obj #p"resources/meshes/cube.obj" :normal-p t)))
+
+(defmethod draw ((cube portal-cube) world)
+  (setf (model-matrix cube) (calc-model-matrix cube))
+  (call-next-method))
+
 ;; the primary purpose of a portal is to store a Warp, which is a datastructure
 ;; describing how two portals are connected.
 ;; it also golds a framebuffer and a 
@@ -17,13 +28,19 @@
     :accessor portal-vertices
     :initarg :plane-vertices
     :initform (list
-               #(0.666667 0.666667 0.666666)
-               #(0.666667 -0.666667 -0.666666))
+               #(0.0 1.0 -1.0)
+               #(0.0 -1.0 1.0))
     :documentation "The *transformed* vertices of the portal plane: (bl, tr)")
    (warp
     :accessor portal-warp
     :type warp
     :documentation "A datastructure describing how two portals are connected")
+
+
+   ;; temporary visualisation, for debugging :)
+   (cube
+    :type portal-cube
+    :accessor portal-cube)
 
    (forward
     :type (vector float 3)
@@ -67,8 +84,8 @@
                   :portal-to portal-to
                   :delta
                    (matrix:*
-                    (matrix:inverse (calc-model-matrix portal-to))
-                    (calc-model-matrix portal-from))))))
+                    (calc-model-matrix portal-to)
+                    (matrix:inverse (calc-model-matrix portal-from)))))))
 
     (connect-portals p1 p2)
     (connect-portals p2 p1)))
@@ -80,16 +97,13 @@
   (with-slots (portal-from portal-to delta) warp
     (make-instance 'rectangular-camera
                    :position
-                   (vec:+
-                    (vec:vec3
-                     (matrix:apply delta
-                                   (vec:vec4
-                                    (vec:- (transform-position portal-from)
-                                           (camera-pos world-cam))
-                                    1.0)))
-                    (transform-position portal-to))
+                   (vec:vec3
+                    (matrix:apply delta
+                                  (vec:vec4
+                                   (camera-pos world-cam)
+                                   1.0)))
                    :direction
-                   (vec:normalize (slot-value portal-to 'forward))
+                   (vec:scale -1.0 (vec:normalize (slot-value portal-to 'forward)))
                    :up
                    #(0.0 1.0 0.0))))
 
@@ -101,21 +115,17 @@
         ;; in terms of the normal, right, up
         (mapcar
          (lambda (vertex)
-           (vec:vec3
-            (matrix:apply (calc-model-matrix portal-to :translation nil)
-                          (vec:vec4 
-                           (vec:- vertex
-                                  (camera-pos trans-cam))
-                           1.0))))
+           (vec:- vertex
+                  (camera-pos trans-cam)))
          (portal-vertices portal-to))
       (let ((up (portal-up portal-to))
             (right (portal-right portal-to))
             (forward (portal-forward portal-to)))
         (matrix:detailed-perspective
-         (vec:dot up top-left)
-         (vec:dot up bottom-right)
-         (vec:dot right top-left)
-         (vec:dot right bottom-right)
+         (vec:dot up top-left)          ;; top
+         (vec:dot up bottom-right)      ;; bottom
+         (vec:dot right bottom-right)   ;; right
+         (vec:dot right top-left)       ;; left
          (vec:dot forward bottom-right)
          (+ (vec:dot forward bottom-right) 100.0))))))
 
@@ -124,6 +134,9 @@
 (defmethod initialize-instance ((portal portal) &key)
   (call-next-method) ; like doing super()
   (setf (model-shader portal) *portal-shader*)
+
+  (setf (portal-cube portal) (make-instance 'portal-cube))
+
   (make-vao portal (load-obj #p"resources/meshes/portal-plane.obj" :texture-p t))
 
   ;; use the transformation matrix to adjust the vectors: up, forward, right
@@ -136,6 +149,16 @@
       (setf up (vec:vec3 (matrix:apply transform (vec:vec4 up 1.0))))
       (setf forward (vec:vec3 (matrix:apply transform (vec:vec4 forward 1.0))))
       (setf right (vec:vec3 (matrix:apply transform (vec:vec4 right 1.0))))))
+
+  (with-slots (vertices) portal
+    (setf vertices
+          (mapcar
+           (lambda (vertex)
+             (vec:vec3
+              (matrix:apply
+               (calc-model-matrix portal)
+               (vec:vec4 vertex 1.0))))
+           vertices)))
 
 
   (let ((rbo nil))
@@ -180,12 +203,17 @@
 (defmethod draw ((portal portal) (world engine))
   (with-slots (fbo texture shader position warp) portal
     ;; generate the texture to load
-    (gl:bind-framebuffer :framebuffer fbo)
-    (gl:clear :color-buffer :depth-buffer)
-    (gl:viewport 0 0 512 512)
 
     (let* ((camera (world-camera world))
            (view (world-view world)))
+
+      (setf (transform-position (portal-cube portal)) (camera-pos (get-portal-camera warp camera)))
+      (draw (portal-cube portal) world)
+
+      (gl:bind-framebuffer :framebuffer fbo)
+      (gl:clear :color-buffer :depth-buffer)
+      (gl:viewport 0 0 512 512)
+
       (setf (world-camera world) (get-portal-camera warp camera))
       (setf (world-view world) (get-portal-view warp (world-camera world)))
 

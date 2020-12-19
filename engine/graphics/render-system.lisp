@@ -1,3 +1,5 @@
+(defgeneric update-model-matrix (model)
+  (:documentation "Generates a new model matrix (via calc-model-matrix) and "))
 
 (defvar *shader-program*)
 

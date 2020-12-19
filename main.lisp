@@ -4,20 +4,8 @@
 
 (load "custom/portal-plane.lisp")
 
-(defclass rotating-cube (model)
-  ((rotation
-    :accessor cube-rotation
-    :initform (vector (/ pi 4) 0.0 (/ pi 4))
-    :documentation "The current rotation of the cube")
-   (direction
-    :accessor cube-rot-dir
-    :initarg :cube-rot-dir
-    :initform 1)
-   (position
-    :accessor cube-position
-    :initform (vector 0.6 0.0 0.0)
-    :initarg :position
-    :documentation "The position of the cube"))
+(defclass rotating-cube (model transform)
+  ()
   (:documentation "A cube which rotates over time"))
   
 
@@ -26,10 +14,8 @@
   (call-next-method))
 
 (defmethod update ((cube rotating-cube) state)
-  (incf (elt (cube-rotation cube) (cube-rot-dir cube)) (* (world-delta-time state) 1.1))
-  (setf (model-matrix cube) (matrix:*
-                             (matrix:translate (cube-position cube))
-                             (matrix:rotate (cube-rotation cube)))))
+  (incf (elt (transform-rotation cube) 1) (* (world-delta-time state) 0.1))
+  (setf (model-matrix cube) (calc-model-matrix cube)))
 
 (defun make-tunnel (position)
   (let ((tunnel (make-instance 'model)))
@@ -58,10 +44,13 @@
    *engine* 
    (lambda ()
      (let ((portal-1 (make-instance 'portal
-                                    :position #(2.0 0.0 0.0)))
+                                    :position #(46.0 0.0 0.0)
+                                    :rotation (vector 0.0 0.0 0.0)))
            (portal-2 (make-instance 'portal
                                     :rotation (vector 0.0 (/ pi 2) 0.0)
                                     :position #(0.0 0.0 2.0))))
+       (setf (model-color (portal-cube portal-1)) #(1.0 0.0 0.0))
+       (setf (model-color (portal-cube portal-2)) #(0.0 1.0 0.0))
        (connect-portals portal-1 portal-2)
        (setf (world-entities *engine*)
              (list
