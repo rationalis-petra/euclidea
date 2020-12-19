@@ -55,10 +55,34 @@
                                     :position #(49.0 0.0 0.0)
                                     :rotation (vector 0.0 0.0 0.0)))
            (portal-2 (make-instance 'portal
+                                    :position #(-2.0 0.0 0.0)
+                                    :rotation (vector 0.0 0.0 0.0)
+                                    :scale #(1.3333334 1.3333334 1.3333334)))
+           (portal-3 (make-instance 'portal
+                                    :position #(-49.0 0.0 0.0)
+                                    :rotation (vector 0.0 pi 0.0)))
+           (portal-4 (make-instance 'portal
+                                    :position #(2.0 0.0 0.0)
+                                    :rotation (vector 0.0 pi 0.0)
+                                    :scale #(1.3333334 1.3333334 1.3333334)))
+           (portal-5 (make-instance 'portal
+                                    :position #(0.0 0.0 49.0)
+                                    :rotation (vector 0.0 (/ pi -2) 0.0)))
+           (portal-6 (make-instance 'portal
+                                    :position #(0.0 0.0 -2.0)
+                                    :rotation (vector 0.0 (/ pi -2) 0.0)
+                                    :scale #(1.3333334 1.3333334 1.3333334)))
+           (portal-7 (make-instance 'portal
+                                    :position #(0.0 0.0 -49.0)
+                                    :rotation (vector 0.0 (/ pi 2) 0.0)))
+           (portal-8 (make-instance 'portal
+                                    :position #(0.0 0.0 2.0)
                                     :rotation (vector 0.0 (/ pi 2) 0.0)
-                                    :scale #(1.3333334 1.3333334 1.3333334)
-                                    :position #(0.0 0.0 2.0))))
+                                    :scale #(1.3333334 1.3333334 1.3333334))))
        (connect-portals portal-1 portal-2)
+       (connect-portals portal-3 portal-4)
+       (connect-portals portal-5 portal-6)
+       (connect-portals portal-7 portal-8)
        (setf (world-entities *engine*)
              (list
               (make-instance 'rotating-cube :position #(-50.0 0.0 0.0)
@@ -71,6 +95,12 @@
                                             :color #(0.8 0.0 0.8))
               portal-1
               portal-2
+              portal-3
+              portal-4
+              portal-5
+              portal-6
+              portal-7
+              portal-8
               ;; (make-tunnel (vector 10 0 0))
               (make-box #(50.0 0.0 0.0) (vector 0.0 (/ pi -2) 0.0))
               (make-box #(-50.0 0.0 0.0) (vector 0.0 (/ pi 2) 0.0))
