@@ -22,17 +22,16 @@ which do not justify building an entirely new system"))
 
 (defmethod update ((entity entity) state) nil)
 
-(load "math/vector.lisp")
-(load "math/matrix.lisp")
-(load "math/transform.lisp")
+(load "engine/math/vector.lisp")
+(load "engine/math/matrix.lisp")
+(load "engine/math/transform.lisp")
 
-(load "graphics/window.lisp")
-(load "graphics/camera.lisp")
-(load "graphics/mesh-loader.lisp")
-(load "graphics/render-system.lisp")
+(load "engine/graphics/window.lisp")
+(load "engine/graphics/camera.lisp")
+(load "engine/graphics/mesh-loader.lisp")
+(load "engine/graphics/render-system.lisp")
 
-(load "physics/physics-system.lisp")
-(load "input/input-system.lisp")
+(load "engine/input/input-system.lisp")
 
 
 (defclass engine ()
@@ -42,7 +41,7 @@ which do not justify building an entirely new system"))
     :documentation "Methods which initialize resources etc. Take 0 arguments")
    (system-functions
     :accessor engine-system-funcs
-    :initform (list #'input-system #'physics-system #'render-system)
+    :initform (list #'input-system #'render-system)
     :documentation "Methods which are called every frame. Take 2 arguments: an entity list & the engine")
    (cleanup-functions
     :accessor engine-cleanup-funcs

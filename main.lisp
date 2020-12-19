@@ -1,6 +1,5 @@
-(load "engine.lisp")
+(load "engine/engine.lisp")
  
-
 (defvar *engine* (make-instance 'engine))
 
 (load "custom/portal-plane.lisp")
@@ -82,7 +81,16 @@
 
 
 (defun make-executable ()
-  (sb-ext:save-lisp-and-die
-   "euclidea"
-   :toplevel #'main
-   :executable t))
+  ;; make an executable depending on implementation/ox
+  (let ((name (if (eql (uiop:detect-os) :os-windows)
+                  "euclidea-windows.exe"
+                  "euclidea-unix"))
+        (implementation (uiop:implementation-type)))
+    (cond
+      ((eql implementation :sbcl)
+       (sb-ext:save-lisp-and-die
+        name
+        :toplevel #'main
+        :executable t))
+      ((eql implementation :clozure)
+       ()))))
