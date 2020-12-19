@@ -4,16 +4,6 @@
   (setf *portal-shader* (new-shader-program "resources/shaders/portal")))
 
 
-(defclass portal-cube (model transform)
-  ())
-    
-(defmethod initialize-instance ((cube portal-cube) &key)
-  (call-next-method)
-  (make-vao cube (load-obj #p"resources/meshes/cube.obj" :normal-p t)))
-
-(defmethod draw ((cube portal-cube) world)
-  (setf (model-matrix cube) (calc-model-matrix cube))
-  (call-next-method))
 
 ;; the primary purpose of a portal is to store a Warp, which is a datastructure
 ;; describing how two portals are connected.
@@ -35,12 +25,6 @@
     :accessor portal-warp
     :type warp
     :documentation "A datastructure describing how two portals are connected")
-
-
-   ;; temporary visualisation, for debugging :)
-   (cube
-    :type portal-cube
-    :accessor portal-cube)
 
    (forward
     :type (vector float 3)
@@ -134,9 +118,6 @@
 (defmethod initialize-instance ((portal portal) &key)
   (call-next-method) ; like doing super()
   (setf (model-shader portal) *portal-shader*)
-
-  ;; the portal cube is a visualisation of the virtual camera position
-  ;;(setf (portal-cube portal) (make-instance 'portal-cube))
 
   (make-vao portal (load-obj #p"resources/meshes/portal-plane.obj" :texture-p t))
 

@@ -58,8 +58,6 @@
                                     :rotation (vector 0.0 (/ pi 2) 0.0)
                                     :scale #(1.3333334 1.3333334 1.3333334)
                                     :position #(0.0 0.0 2.0))))
-       (setf (model-color (portal-cube portal-1)) #(1.0 0.0 0.0))
-       (setf (model-color (portal-cube portal-2)) #(0.0 1.0 0.0))
        (connect-portals portal-1 portal-2)
        (setf (world-entities *engine*)
              (list
