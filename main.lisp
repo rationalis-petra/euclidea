@@ -61,28 +61,28 @@
                                     :position #(49.0 0.0 0.0)
                                     :rotation (vector 0.0 0.0 0.0)))
            (portal-2 (make-instance 'portal
-                                    :position #(-2.0 0.0 0.0)
+                                    :position #(-1.666 0.0 0.0)
                                     :rotation (vector 0.0 0.0 0.0)
                                     :scale #(1.33334 1.33334 1.33334)))
            (portal-3 (make-instance 'portal
                                     :position #(-49.0 0.0 0.0)
                                     :rotation (vector 0.0 pi 0.0)))
            (portal-4 (make-instance 'portal
-                                    :position #(2.0 0.0 0.0)
+                                    :position #(1.666 0.0 0.0)
                                     :rotation (vector 0.0 pi 0.0)
                                     :scale #(1.33334 1.33334 1.33334)))
            (portal-5 (make-instance 'portal
                                     :position #(0.0 0.0 49.0)
                                     :rotation (vector 0.0 (/ pi -2) 0.0)))
            (portal-6 (make-instance 'portal
-                                    :position #(0.0 0.0 -2.0)
+                                    :position #(0.0 0.0 -1.666)
                                     :rotation (vector 0.0 (/ pi -2) 0.0)
                                     :scale #(1.33334 1.33334 1.33334)))
            (portal-7 (make-instance 'portal
                                     :position #(0.0 0.0 -49.0)
                                     :rotation (vector 0.0 (/ pi 2) 0.0)))
            (portal-8 (make-instance 'portal
-                                    :position #(0.0 0.0 2.0)
+                                    :position #(0.0 0.0 1.666)
                                     :rotation (vector 0.0 (/ pi 2) 0.0)
                                     :scale #(1.33334 1.33334 1.33334))))
        (connect-portals portal-1 portal-2)
