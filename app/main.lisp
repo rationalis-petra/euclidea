@@ -8,12 +8,27 @@
 ;; Use the "engine": on initialization, create many objects/portals and link them together
 (defun main ()
   (setf *engine* (make-instance 'engine))
-  (setf (camera-pos (world-camera *engine*)) #(-4.0 0.0 0.0))
+  ;(setf (camera-pos (world-camera *engine*)) #(-4.0 0.0 0.0))
+
 
   (add-cleanup-func *engine* #'glfw:terminate)
+  (add-cleanup-func *engine* (lambda () (mapcar #'delete-window (windows *engine*))))
+
+  (add-system-func *engine* #'input-system)
+  (add-system-func *engine* #'render-system)
 
   ;; TODO: add ability to add window /before init funcs??
   ;;(add-init-func *engine*)
+  (add-init-func *engine* #'(lambda ()
+                              (make-instance
+                               'ec-window
+                               :app *engine*
+                               :title "Euclidea"
+                               :width 1280
+                               :height 720)))
+
+  (add-init-func *engine* #'render-init)
+  (add-init-func *engine* #'render-init)
   (add-init-func *engine* #'make-portal-shader)
   (add-init-func
    *engine* 

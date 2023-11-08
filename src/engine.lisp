@@ -11,18 +11,9 @@
 ;; + update & input values: delta-time, cursor position, ...
 
 
+
 (defclass entity () ()
   (:documentation "Root of Object hierarchy for systems"))
-
-(defgeneric update (entity state)
-  (:documentation "A function that a user of the engine can choose to implement to define custom behaviours, but
-which do not justify building an entirely new system"))
-
-(defgeneric attach-window (engine window)
-  (:documentation "An engine will render to an attached window: can only have one attached window at a time"))
-
-;; if the entity subclass does not implemnt update, do nothing
-(defmethod update ((entity entity) state))
 
 
 (defclass engine ()
@@ -30,17 +21,22 @@ which do not justify building an entirely new system"))
   ((init-functions
     :type list
     :accessor engine-init-funcs
-    :initform (list (lambda () (attach-window *engine* (new-window 1280 720))) #'render-init)
+    :initform nil
     :documentation "Methods which initialize resources etc. Take 0 arguments")
    (system-functions
     :type list
     :accessor engine-system-funcs
-    :initform (list #'input-system #'render-system)
+    :initform nil 
     :documentation "Methods which are called every frame. Take 2 arguments: an entity list & the engine")
    (cleanup-functions
     :accessor engine-cleanup-funcs
-    :initform (list (lambda () (delete-window)))
+    :initform nil
     :documentation "Methods which cleanup resources, etc. Guaranteed to be called via unwind-protect")
+
+   (windows
+    :accessor windows
+    :initform nil
+    :documentation "The list of windows currently associated with the application")
 
    ;; The engine also contains several variables relating to world-state. these are specified here
    (entities
@@ -48,47 +44,31 @@ which do not justify building an entirely new system"))
     :accessor world-entities
     :initform nil
     :documentation "The objectes which the simulation engine will operate on")
-   (camera
-    :type camera
-    :accessor world-camera
-    :initform (make-instance 'polar-camera)
-    :documentation "The default camera. It is from this perspective that a model will be rendered")
    (delta-time
     :type float
-    :accessor world-delta-time
+    :accessor delta-time
     :initform 0.0
     :documentation "Time since last main-loop iteration, in seconds")
-   (cursor-pos
-    :type (vector fixnum 2)
-    :accessor world-cursor-pos
-    :initform (vector 0 0)
-    :documentation "The coordinates of the cursor")
-   (cursor-delta-pos
-    :type (vector fixnum 2)
-    :accessor world-cursor-delta-pos
-    :initform (vector 0 0)
-    :documentation "The change in location of the cursor since last main-loop iteration"))
+   (should-exit
+    :type boolean
+    :accessor should-exit
+    :initform nil
+    :documentation "Used to signal if the engine should exit (cleanly) at the
+   end of the current loop"))
    (:documentation "Encapsulates the necessary state & methods to run a simulation"))
 
+(defgeneric update (entity state)
+  (:method ((entity entity) state)
+    (declare (ignore entity state)))
+  (:documentation "A function that a user of the engine can choose to implement to define custom behaviours, but
+which do not justify building an entirely new system"))
 
-;; attach a glfw window to the engine instance. May update the (currently clunky)
-;; way of handling windows: they are just a raw glfw window handle at the moment
-(defmethod attach-window ((engine engine) window)
-  (with-slots (width height projection) (world-camera engine)
-    (setf projection (matrix:perspective (/ pi 2) 16/9 0.1 100))
-    (setf width 1280)
-    (setf height 720))
-
-  ;; set the window size callback to adjust height/width of the viewport
-  ;; and aspect ratio, accordingly
-  (glfw:def-window-size-callback update-viewport (window w h)
-    (declare (ignore window))
-    (lambda ()
-      (with-slots (width height) (world-camera engine)
-        (setf projection (matrix:perspective (/ pi 2) (/ w h) 0.1 100))
-        (setf width w)
-        (setf height h)))))
-
+(defgeneric attach-window (window engine)
+  (:method :around (window (engine engine))
+    (push window (windows engine)))
+  (:method (window (engine engine))
+    (declare (ignore window engine)))
+  (:documentation "An engine will render to an attached window: can only have one attached window at a time"))
 
 ;; The run method is a function because we don't want it being overriden
 (defun run (engine)
@@ -101,12 +81,9 @@ which do not justify building an entirely new system"))
 
            (let* (;; used to keep track of deltatime: first deltatime is 0
                   (time-1 (get-internal-real-time))
-                  (time-2 time-1)
-                  ;; used to keep track of cursor position
-                  (cursor-1 (get-cursor-pos))
-                  (cursor-2 cursor-1))
+                  (time-2 time-1))
 
-             (loop until (or (window-should-close-p) (key-is-pressed-p :escape)) do
+             (loop until (should-exit engine) do
                ;;; update the world state
                ;; deltatime
                (setf delta-time
@@ -116,10 +93,10 @@ which do not justify building an entirely new system"))
                ;;(setf time time-2)
 
                ;; cursorpos
-               (setf cursor-delta-pos (vec:- cursor-2 cursor-1))
-               (setf cursor-1 cursor-2)
-               (setf cursor-2 (get-cursor-pos))
-               (setf cursor-pos cursor-2)
+               ;; (setf cursor-delta-pos (vec:- cursor-2 cursor-1))
+               ;; (setf cursor-1 cursor-2)
+               ;; (setf cursor-2 (get-cursor-pos))
+               ;; (setf cursor-pos cursor-2)
 
                ;; the names of these systems should be self-explanatory
                ;; the update function is for overriding
@@ -133,6 +110,10 @@ which do not justify building an entirely new system"))
 (defun add-init-func (engine func)
   (with-slots ((in-fns init-functions)) engine
     (setf in-fns (append in-fns (list func)))))
+
+(defun add-system-func (engine func)
+  (with-slots ((sys-fns system-functions)) engine
+    (setf sys-fns (append sys-fns (list func)))))
 
 (defun add-cleanup-func (engine func)
   (with-slots ((clean-fns cleanup-functions)) engine

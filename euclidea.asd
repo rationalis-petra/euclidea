@@ -22,6 +22,7 @@
     :depends-on ("src")
     :components
     ((:file "main" :depends-on ("entities" "systems"))
+     (:file "window")
      (:module
       "entities"
       :pathname "entities"

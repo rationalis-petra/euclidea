@@ -84,7 +84,7 @@ position relative to the to-portal"))
 
 ;; if you want to learn about what this method is doing, it's the focus of the pdf "Portal Math"
 ;; in the doc directory
-(defmethod get-portal-camera((warp warp) (world-cam camera))
+(defmethod get-portal-camera ((warp warp) (world-cam camera))
   (with-slots (portal-from portal-to delta) warp
     (let ((trans-cam
             (make-instance 'rectangular-camera
@@ -197,8 +197,14 @@ position relative to the to-portal"))
       (gl:bind-framebuffer :framebuffer 0))
     (call-next-method)))
 
+(defclass portal-canvas ()
+  ((camera
+   :accessor camera)))
+(defmethod initialize-instance ((canvas portal-canvas) &key camera)
+  (setf (slot-value canvas 'camera) camera))
+
 ;; Override the draw method for the portal
-(defmethod draw ((portal portal) (world engine))
+(defmethod draw ((portal portal) canvas world)
   (with-slots (fbo texture shader position warp) portal
 
     ;; we start by binding the framebuffer of the portal so that future calls
@@ -207,17 +213,14 @@ position relative to the to-portal"))
     (gl:clear :color-buffer :depth-buffer)
 
     ;; we generate a new camera that can be used
-    (let* ((camera (world-camera world)))
-      (setf (world-camera world) (get-portal-camera warp camera))
-
+    (let* ((new-canvas
+             (make-instance 'portal-canvas
+                            :camera (get-portal-camera warp (camera canvas)))))
       ;; Draw all entities that are not portals, to avoid recursion issues
       ;; this may be updated, e.g. with a max recursion depth or occlusion-based
       ;; selective portal rendering
-      (mapcar (lambda (e) (unless (typep e 'portal) (draw e world)))
-              (world-entities world))
-
-      ;; restore the camera to the state it was in prior to drawing the portal
-      (setf (world-camera world) camera))
+      (mapcar (lambda (e) (unless (typep e 'portal) (draw e new-canvas world)))
+              (world-entities world)))
 
     ;; re-bind the default framebuffer so future calls to draw will output to
     ;; the window 

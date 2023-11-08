@@ -13,6 +13,6 @@
 
 ;; rotate on update by applying a rotation matrix to the model matrix
 (defmethod update ((cube rotating-cube) state)
-  (incf (elt (transform-rotation cube) 1) (* (world-delta-time state) 0.1))
+  (incf (elt (transform-rotation cube) 1) (* (delta-time state) 0.1))
   (setf (model-matrix cube) (calc-model-matrix cube)))
 

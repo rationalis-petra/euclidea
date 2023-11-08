@@ -117,13 +117,13 @@
 
 
 
-(defgeneric draw (entity world)
+(defgeneric draw (entity canvas world)
+  (:method ((entity entity) canvas world)
+    (declare (ignore m canvas world)))
   (:documentation "a generic draw method"))
 
-(defmethod draw ((m entity) world))
-
-(defmethod draw ((m model) world)
-  (with-slots (camera) world
+(defmethod draw ((m model) canvas world)
+  (with-slots (camera) canvas
     (gl:viewport 0 0 (camera-width camera) (camera-height camera))
     (with-slots (shader texture color) m
       (gl:use-program shader)
@@ -145,17 +145,15 @@
       (gl:bind-vertex-array (model-vao m))
       (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count (model-size m)))))
 
-
-
 (defun render-init ()
   ;; make the shader: location resources/shaders/basic.(vert/frag)
   (setf *shader-program* (new-shader-program "resources/shaders/basic")))
 
 
-
 (defun render-system (entities world)
-  (poll-events)
-  (mapcar (lambda (x) (draw x world)) entities)
-  (display))
+  (loop for window in (windows world) do
+    (window-prerender window)
+    (mapcar (lambda (x) (draw x window world)) entities)
+    (window-postrender window)))
 
 
