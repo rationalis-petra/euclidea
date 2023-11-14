@@ -7,9 +7,9 @@
   
 ;; load mesh, scale down so it fits in the box
 (defmethod initialize-instance ((cube rotating-cube) &key)
+  (call-next-method)
   (setf (transform-scale cube) #(0.5 0.5 0.5))
-  (make-vao cube (load-obj #p"resources/meshes/cube.obj" :normal-p t))
-  (call-next-method))
+  (make-vao cube (load-obj #p"resources/meshes/cube.obj" :normal-p t)))
 
 ;; rotate on update by applying a rotation matrix to the model matrix
 (defmethod update ((cube rotating-cube) state)

@@ -21,7 +21,7 @@
   ((init-functions
     :type list
     :accessor engine-init-funcs
-    :initform nil
+    :initform (list #'initialize-all-contexts)
     :documentation "Methods which initialize resources etc. Take 0 arguments")
    (system-functions
     :type list

@@ -8,8 +8,6 @@
 ;; Use the "engine": on initialization, create many objects/portals and link them together
 (defun main ()
   (setf *engine* (make-instance 'engine))
-  ;(setf (camera-pos (world-camera *engine*)) #(-4.0 0.0 0.0))
-
 
   (add-cleanup-func *engine* #'glfw:terminate)
   (add-cleanup-func *engine* (lambda () (mapcar #'delete-window (windows *engine*))))

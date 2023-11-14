@@ -17,7 +17,8 @@
 ;; another one via a warp instance
 (defclass portal (model transform) 
   ((fbo
-    :type (unsigned-byte 32)
+    :accessor fbo
+    ;:type (unsigned-byte 32)
     :documentation "A Handle to an OpenGL Framebuffer Object")
    (vertices
     :type list
@@ -156,12 +157,17 @@ position relative to the to-portal"))
                (calc-model-matrix portal :scale nil)
                (vec:vec4 vertex 1.0))))
            vertices)))
+  (setf (model-matrix portal) (calc-model-matrix portal))
+  (setf (fbo portal)
+        (make-instance 'context-value
+                       :initializer (lambda () (initialize-fbo portal))
+                       :finalizer (lambda ())))
+  (call-next-method))
 
-
-  (let ((rbo nil))
-    (with-slots (model-matrix shader fbo texture) portal
-      (setf model-matrix (calc-model-matrix portal))
-
+(defun initialize-fbo (portal)
+  (let* ((fbo (gl:gen-framebuffer))
+         (rbo (gl:gen-renderbuffer)))
+    (with-slots (shader texture) portal
       ;; generate fbo, rbo, texture
       (setf fbo (gl:gen-framebuffer))
       (setf rbo (gl:gen-renderbuffer))
@@ -195,7 +201,7 @@ position relative to the to-portal"))
           (error "Framebuffer not complete: ~A." framebuffer-status)))
 
       (gl:bind-framebuffer :framebuffer 0))
-    (call-next-method)))
+    fbo))
 
 (defclass portal-canvas ()
   ((camera
@@ -209,7 +215,7 @@ position relative to the to-portal"))
 
     ;; we start by binding the framebuffer of the portal so that future calls
     ;; to draw will instead draw the object to the active framebuffer
-    (gl:bind-framebuffer :framebuffer fbo)
+    (gl:bind-framebuffer :framebuffer (context-value fbo))
     (gl:clear :color-buffer :depth-buffer)
 
     ;; we generate a new camera that can be used

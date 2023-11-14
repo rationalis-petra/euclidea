@@ -5,8 +5,14 @@
 
 (defclass model (entity)
   ((vao
-    :accessor model-vao 
+    :accessor model-vao
     :documentation "Handle to OpenGL VAO")
+   (mesh-vbo
+    :accessor model-mesh-vbo
+    :documentation "Handle to OpenGL VBO")
+   (indices-vbo
+    :accessor model-index-vbo
+    :documentation "Handle to OpenGL VBO")
    (size
     :accessor model-size
     :documentation "The number of vertices to draw: |indices|")
@@ -26,7 +32,10 @@
     :type matrix:matrix
     :accessor model-matrix
     :initform (matrix:identity 4)
-    :documentation "A matrix describing rotation, tranlsation, scale"))
+    :documentation "A matrix describing rotation, tranlsation, scale")
+   (properties
+    :accessor properties
+    :initform nil))
   
   (:documentation "Contains information needed by OpenGL to render an Object"))
 
@@ -40,6 +49,7 @@
 
 ;; a vao: currently just coordiantes & indices
 (defun make-vao (mesh data)
+
   ;; generate & bind the VBO (data storage)
   (let* ((buffers (gl:gen-buffers 2))
          (vert-buf (elt buffers 0))
@@ -53,6 +63,7 @@
 
       ;; bind the corret VBO
       (gl:bind-buffer :array-buffer vert-buf)
+      (setf (model-mesh-vbo mesh) vert-buf)
 
       ;; copy the data into the vbo
       (gl:buffer-data :array-buffer :static-draw arr)
@@ -71,6 +82,7 @@
 
       ;; bind the index VBO
       (gl:bind-buffer :element-array-buffer ind-buf)
+      (setf (model-index-vbo mesh) ind-buf)
 
       ;; copy the data into the vbo
       (gl:buffer-data :element-array-buffer :static-draw arr)
@@ -79,35 +91,53 @@
       ;; unbind
       (gl:bind-buffer :element-array-buffer 0))
 
+    (when (getf data :texture-p)
+      (push :texture (properties mesh)))
+    (when (getf data :normal-p)
+      (push :normals (properties mesh)))
+    ;; generate a vao to reference this data
+    (setf (model-vao mesh)
+          (make-instance
+           'context-value
+           :initializer
+           (lambda () (generate-vao
+                       mesh
+                       (getf data :texture-p)
+                       (getf data :normal-p)))
+           :finalizer
+           (lambda (x))))))
 
-      ;; generate a vao to reference this data
-    (let ((vao (gl:gen-vertex-array))
-          (stride (* (cffi:foreign-type-size :float)
-                     (+ 3
-                        (if (getf data :texture-p) 2 0)
-                        (if (getf data :normal-p) 3 0)))))
-      (gl:bind-vertex-array vao)
-      (gl:bind-buffer :array-buffer vert-buf)
+(defun generate-vao (mesh has-texture has-normals)
+  (let ((vao (gl:gen-vertex-array))
+        (stride (* (cffi:foreign-type-size :float)
+                   (+ 3
+                      (if has-texture 2 0)
+                      (if has-normals 3 0)))))
+    (gl:bind-vertex-array vao)
+    (gl:bind-buffer :array-buffer (model-mesh-vbo mesh))
 
-      ;; how the data is layed out
-      (gl:enable-vertex-attrib-array 0)
-      (gl:vertex-attrib-pointer 0 3 :float nil stride 0)
+    ;; how the data is layed out
+    (gl:enable-vertex-attrib-array 0)
+    (gl:vertex-attrib-pointer 0 3 :float nil stride 0)
 
-      (when (getf data :texture-p)
-        (gl:enable-vertex-attrib-array 1)
-        (gl:vertex-attrib-pointer 1 2 :float nil stride (* 3 (cffi:foreign-type-size :float))))
 
-      (when (getf data :normal-p)
-        (gl:enable-vertex-attrib-array 1)
-        (gl:vertex-attrib-pointer 1 3 :float nil stride (* 3 (cffi:foreign-type-size :float))))
+    ;; TODO: it seems here that texture vs normals is mutually exclusive...
+    ;; this should be coded more explicitly!!
+    (when has-texture
+      (gl:enable-vertex-attrib-array 1)
+      (gl:vertex-attrib-pointer 1 2 :float nil stride (* 3 (cffi:foreign-type-size :float))))
 
-      ;; bind EAO
-      (gl:bind-buffer :element-array-buffer ind-buf)
+    (when has-normals
+      (gl:enable-vertex-attrib-array 1)
+      (gl:vertex-attrib-pointer 1 3 :float nil stride (* 3 (cffi:foreign-type-size :float))))
 
-      ;; unbind the vao
-      (gl:bind-vertex-array 0)
-      ;; return
-      (setf (model-vao mesh) vao))))
+    ;; bind EAO
+    (gl:bind-buffer :element-array-buffer (model-index-vbo mesh))
+
+    ;; unbind the vao
+    (gl:bind-vertex-array 0)
+    ;; return
+    vao))
 
 ;; see https://github.com/3b/cl-opengl/blob/master/examples/misc/opengl-array.lisp
 
@@ -142,8 +172,10 @@
 
       ;; now actually draw the shape
       (when texture (gl:bind-texture :texture-2d texture))
-      (gl:bind-vertex-array (model-vao m))
+      (gl:bind-vertex-array (context-value (model-vao m)))
       (gl:draw-elements :triangles (gl:make-null-gl-array :unsigned-short) :count (model-size m)))))
+
+
 
 (defun render-init ()
   ;; make the shader: location resources/shaders/basic.(vert/frag)
@@ -152,8 +184,8 @@
 
 (defun render-system (entities world)
   (loop for window in (windows world) do
-    (window-prerender window)
+    (canvas-predraw window)
     (mapcar (lambda (x) (draw x window world)) entities)
-    (window-postrender window)))
+    (canvas-postdraw window)))
 
 

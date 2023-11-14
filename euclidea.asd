@@ -62,7 +62,8 @@
        (:file "camera")
        (:file "mesh-loader")
        (:file "transform")
-       (:file "window")))
+       (:file "window" :depends-on ("canvas"))
+       (:file "canvas")))
      (:module
       "math"
       :pathname "math"

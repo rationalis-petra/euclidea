@@ -17,7 +17,22 @@
 (defun input-window (window world)
   (let ((camera (camera window))
         (time (delta-time world)))
-    ;; TODO: figure out a more elegant solution???
+
+    (when (or (window-should-close-p window)
+              (key-is-pressed-p window :escape))
+        (setf (should-exit world) t))
+
+    (when (key-is-pressed-p window :n)
+      (push (make-instance
+             'ec-window
+             :title "Child"
+             :width 1280
+             :height 720
+             :app world
+             :shared window)
+            (windows world)))
+
+
     (with-slots (position polar-direction up) camera
       (let* ((theta (elt (camera-polar-direction camera) 0))
              (phi   (elt (camera-polar-direction camera) 1))

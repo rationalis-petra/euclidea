@@ -19,7 +19,6 @@
 
 (defmethod initialize-instance ((window ec-window) &key &allow-other-keys)
   (setf (prev-cursor-pos window) (cursor-pos window))
-  ;; ???
   (setf (camera window) (make-instance 'polar-camera))
   (with-slots (width height projection) (camera window)
     (setf projection (matrix:perspective (/ pi 2) (/ (width window) (height window)) 0.1 100))
