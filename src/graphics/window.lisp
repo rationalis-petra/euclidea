@@ -1,5 +1,8 @@
 ;;;; WINDOW
 ;; A file which mostly provides thin wrappers over glfw/opengl functions
+(defpackage euclid.window
+  (:use :cl)
+  (:export :window :context-value))
 
 (defclass window ()
   ((handle :initform nil :reader %handle-of)
@@ -78,6 +81,12 @@
     (setf window-height height)
 
     (attach-window window app)
+
+    (glfw:def-window-size-callback ws-callback (win w h)
+      (declare (ignore win))
+      (setf (width window) w)
+      (setf (height window) h))
+    (glfw:set-window-size-callback 'ws-callback)
   
     ;; TODO where to put this code?
     (glfw:set-input-mode :cursor :disabled)
@@ -86,6 +95,7 @@
     (gl:enable :depth-test))
   (call-next-method))
 
+(defun )
 
 (defun update-window (window)
   (setf (cursor-delta-pos window) (vec:- (cursor-pos window) (prev-cursor-pos window)))
@@ -132,7 +142,6 @@
 
 (defun window-should-close-p (window)
   (glfw:window-should-close-p (%handle-of window)))
-
 
 
 ;; 
