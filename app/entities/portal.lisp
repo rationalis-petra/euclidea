@@ -209,34 +209,44 @@ position relative to the to-portal"))
 (defmethod initialize-instance ((canvas portal-canvas) &key camera)
   (setf (slot-value canvas 'camera) camera))
 
+(defvar *portal-recursion-depth* 0)
+(defvar *portal-framebuffer* 0)
+
 ;; Override the draw method for the portal
 (defmethod draw ((portal portal) canvas world)
-  (with-slots (fbo texture shader position warp) portal
+  ;; note: Bug when we set this number to > 1
+  ;; this is because this portal at both a current & deeper recursion level 
+  ;; use the same framebuffer object, leading to weird visual glitches
+  (when (< *portal-recursion-depth* 1)
+    (let ((*portal-recursion-depth* (+ 1 *portal-recursion-depth*)))
+      (with-slots (fbo texture shader position warp) portal
 
-    ;; we start by binding the framebuffer of the portal so that future calls
-    ;; to draw will instead draw the object to the active framebuffer
-    (gl:bind-framebuffer :framebuffer (context-value fbo))
-    (gl:clear :color-buffer :depth-buffer)
+        ;; we start by binding the framebuffer of the portal so that future calls
+        ;; to draw will instead draw the object to the active framebuffer
+        (gl:bind-framebuffer :framebuffer (context-value fbo))
+        (gl:clear :color-buffer :depth-buffer)
 
-    ;; we generate a new camera that can be used
-    (let* ((new-canvas
-             (make-instance 'portal-canvas
-                            :camera (get-portal-camera warp (camera canvas)))))
-      ;; Draw all entities that are not portals, to avoid recursion issues
-      ;; this may be updated, e.g. with a max recursion depth or occlusion-based
-      ;; selective portal rendering
-      (mapcar (lambda (e) (unless (typep e 'portal) (draw e new-canvas world)))
-              (world-entities world)))
+        ;; we generate a new camera that can be used
+        (let* ((*portal-framebuffer* (context-value fbo))
+               (new-canvas
+                 (make-instance 'portal-canvas
+                                :camera (get-portal-camera warp (camera canvas)))))
+          ;; draw all entities - note that the recursion check occurs in the
+          ;; beginning of the `draw` function.
+          (mapcar (lambda (e)
+                    (unless (eq portal e)
+                      (draw e new-canvas world)))
+                  (world-entities world)))
 
-    ;; re-bind the default framebuffer so future calls to draw will output to
-    ;; the window 
-    (gl:bind-framebuffer :framebuffer 0)
+        ;; re-bind the default framebuffer so future calls to draw will output to
+        (gl:bind-framebuffer :framebuffer *portal-framebuffer*)
 
-    ;; generate mipmap for the texture
-    (gl:bind-texture :texture-2d texture)
-    (gl:generate-mipmap :texture-2d)
-    (gl:bind-texture :texture-2d 0)
 
-    ;; draw as usual
-    (call-next-method)))
+        ;; generate mipmap for the texture
+        (gl:bind-texture :texture-2d texture)
+        (gl:generate-mipmap :texture-2d)
+        (gl:bind-texture :texture-2d 0)
+
+        ;; draw as usual
+        (call-next-method)))))
 
